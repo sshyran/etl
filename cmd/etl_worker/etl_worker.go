@@ -141,14 +141,14 @@ func worker(rwr http.ResponseWriter, rq *http.Request) {
 		}
 	}
 	etaUnixSecondsStr := rq.Header.Get("X-AppEngine-TaskETA")
-	etaUnixSeconds := int64(0)
+	etaUnixSeconds := float64(0)
 	if etaUnixSecondsStr != "" {
-		etaUnixSeconds, err = strconv.ParseInt(etaUnixSecondsStr, 0, 64)
+		etaUnixSeconds, err = strconv.ParseFloat(etaUnixSecondsStr, 64)
 		if err != nil {
 			log.Printf("Invalid eta string: %s\n", etaUnixSecondsStr)
 		}
 	}
-	etaTime := time.Unix(etaUnixSeconds, 0)
+	etaTime := time.Unix(int64(etaUnixSeconds), 0)
 	age := time.Since(etaTime)
 
 	rq.ParseForm()
