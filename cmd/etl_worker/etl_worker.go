@@ -13,6 +13,7 @@ import (
 
 	"github.com/m-lab/go/prometheusx"
 
+	"github.com/m-lab/etl/admission"
 	"github.com/m-lab/etl/bq"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/metrics"
@@ -139,15 +140,15 @@ func worker(rwr http.ResponseWriter, rq *http.Request) {
 			log.Printf("Invalid execution count string: %s\n", executionCountStr)
 		}
 	}
-	etaUnixMicroStr := rq.Header.Get("X-AppEngine-TaskETA")
-	etaUnixMicro := int64(0)
-	if etaUnixMicroStr != "" {
-		etaUnixMicro, err = strconv.ParseInt(etaUnixMicroStr, 0, 64)
+	etaUnixSecondsStr := rq.Header.Get("X-AppEngine-TaskETA")
+	etaUnixSeconds := int64(0)
+	if etaUnixSecondsStr != "" {
+		etaUnixSeconds, err = strconv.ParseInt(etaUnixSecondsStr, 0, 64)
 		if err != nil {
-			log.Printf("Invalid eta string: %s\n", etaUnixMicroStr)
+			log.Printf("Invalid eta string: %s\n", etaUnixSecondsStr)
 		}
 	}
-	etaTime := time.Unix(etaUnixMicro/1000000, 0) // second granularity is sufficient.
+	etaTime := time.Unix(etaUnixSeconds, 0)
 	age := time.Since(etaTime)
 
 	rq.ParseForm()
@@ -289,6 +290,8 @@ func main() {
 	runtime.SetBlockProfileRate(1000000) // One event per msec.
 
 	setMaxInFlight()
+
+	admission.Monitor(10 * time.Second) // 5 minute interval
 
 	// We also setup another prometheus handler on a non-standard path. This
 	// path name will be accessible through the AppEngine service address,
