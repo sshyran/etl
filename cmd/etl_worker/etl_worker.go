@@ -291,7 +291,7 @@ func main() {
 
 	setMaxInFlight()
 
-	admission.Monitor(10 * time.Second) // 5 minute interval
+	go admission.Monitor(30 * time.Second) // 15 minute interval
 
 	// We also setup another prometheus handler on a non-standard path. This
 	// path name will be accessible through the AppEngine service address,
