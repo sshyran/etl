@@ -115,7 +115,7 @@ func Monitor(interval time.Duration) {
 		return
 	}
 
-	rotate(stat[0])
+	stats = append(stats, stat[0])
 	for {
 		ticker := time.NewTicker(interval)
 
