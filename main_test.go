@@ -25,9 +25,11 @@ func try(K int, N int, X float64) float64 {
 }
 func TestMain(t *testing.T) {
 
-	K := 4 // Number of processors
+	// Number of processors
+	//for K := 2; K <= 16; K *= 2 {
+	K := 8
 	for X := 0.1; X < 0.81; X += 0.1 {
-		for N := 6; ; N++ {
+		for N := K + K/2; ; N++ {
 			cpu := try(K, N, X)
 			if cpu > 0.95 {
 				break
@@ -35,5 +37,6 @@ func TestMain(t *testing.T) {
 		}
 		fmt.Println()
 	}
+	//}
 
 }
