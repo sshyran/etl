@@ -61,6 +61,9 @@ func TestValidation(t *testing.T) {
 }
 
 func TestNDTParser(t *testing.T) {
+	// Handles all requests as if v2 batch.
+	defer startFakeAnnotator()()
+
 	// Load test data.
 	ins := newInMemoryInserter()
 	n := parser.NewNDTParser(ins)

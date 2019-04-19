@@ -271,49 +271,68 @@ func TestParseJSONGeoDataResponse(t *testing.T) {
 	}
 }
 
-func TestGetBatchGeoData(t *testing.T) {
-	tests := []struct {
-		url string
-		res map[string]api.GeoData
-	}{
-		{
-			url: "portGarbage",
-			res: nil,
-		},
-		{
-			url: "/badJson",
-			res: nil,
-		},
-		{
-			url: "/goodJson",
-			res: map[string]api.GeoData{"127.0.0.1xyz": {Geo: nil, Network: nil}},
-		},
-	}
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		if strings.HasSuffix(path, "goodJson") {
-			fmt.Fprint(w, `{"127.0.0.1xyz": {"Geo":null,"ASN":null}}`)
-			return
-		}
-		fmt.Fprint(w, "{jngngfsljngsljngfsljngsljn")
-	}))
-	for _, test := range tests {
-		res := annotation.GetBatchGeoData(ts.URL+test.url, nil)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %+v, got %+v for data: %s\n", test.res, res, test.url)
-		}
-
-	}
-
-}
-
 func TestBatchQueryAnnotationService(t *testing.T) {
 	tests := []struct {
 		url string
 		res []byte
 		err error
 	}{
+		func TestAddGeoDataPTHop(t *testing.T) {
+	tests := []struct {
+		hop       schema.ParisTracerouteHop
+		timestamp time.Time
+		url       string
+		res       schema.ParisTracerouteHop
+	}{
 		{
+			hop:       schema.ParisTracerouteHop{},
+			timestamp: time.Now(),
+			url:       "/notCalled",
+			res:       schema.ParisTracerouteHop{},
+		},
+		{
+			hop:       schema.ParisTracerouteHop{Src_ip: "127.0.0.1"},
+			timestamp: time.Now(),
+			url:       "/src",
+			res: schema.ParisTracerouteHop{
+				Src_ip:          "127.0.0.1",
+				Src_geolocation: api.GeolocationIP{PostalCode: "10583"},
+			},
+		},
+		{
+			hop:       schema.ParisTracerouteHop{Dest_ip: "127.0.0.1"},
+			timestamp: time.Now(),
+			url:       "/dest",
+			res: schema.ParisTracerouteHop{
+				Dest_ip:          "127.0.0.1",
+				Dest_geolocation: api.GeolocationIP{PostalCode: "10583"},
+			},
+		},
+		{
+			hop:       schema.ParisTracerouteHop{Src_ip: "127.0.0.1", Dest_ip: "127.0.0.2"},
+			timestamp: time.Now(),
+			url:       "/both",
+			res: schema.ParisTracerouteHop{
+				Src_ip:           "127.0.0.1",
+				Src_geolocation:  api.GeolocationIP{PostalCode: "10583"},
+				Dest_ip:          "127.0.0.2",
+				Dest_geolocation: api.GeolocationIP{PostalCode: "10583"},
+			},
+		},
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"Geo":{"postal_code":"10583"},"ASN":{}}`)
+	}))
+	defer ts.Close()
+	for _, test := range tests {
+		annotation.BaseURL = ts.URL + test.url
+		p.AddGeoDataPTHop(&test.hop, test.timestamp)
+		if !reflect.DeepEqual(test.hop, test.res) {
+			t.Errorf("Expected %v, got %v for test %s", test.res, test.hop, test.url)
+		}
+	}
+}
+
 			url: "portGarbage",
 			res: nil,
 			err: errors.New("HTTP Protocol Error"),

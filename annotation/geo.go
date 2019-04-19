@@ -212,7 +212,7 @@ func ParseJSONGeoDataResponse(jsonBuffer []byte) (*api.GeoData, error) {
 // encounters any error and cannot get the data for any reason
 // TODO - dedup common code in GetGeoData
 // TODO Deprecated - update all clients to use AddGeoAnnotations.
-func GetBatchGeoData(url string, data []api.RequestData) map[string]api.GeoData {
+func xGetBatchGeoData(url string, data []api.RequestData) map[string]api.GeoData {
 	// Query the service and grab the response safely
 	// All errors are recorded to metrics, so OK to ignore them here.
 	annotatorResponse, err := BatchQueryAnnotationService(url, data)

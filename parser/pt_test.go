@@ -1,15 +1,41 @@
 package parser_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/etl/annotation"
 	"github.com/m-lab/etl/parser"
 	"github.com/m-lab/etl/schema"
 )
+
+// NOTE: This currently always returns a V2 batch annotation response.
+func startFakeAnnotator() func() {
+	annMap := map[string]*api.GeoData{}
+	response := v2.Response{AnnotatorDate: time.Date(2018, 05, 12, 0, 0, 0, 0, time.UTC), Annotations: annMap}
+	//spew.Dump(response)
+	responseBytes, _ := json.Marshal(response)
+	responseJSON := string(responseBytes)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, responseJSON)
+	}))
+	url := annotation.BatchURL
+	closer := func() {
+		annotation.BatchURL = url
+		ts.Close()
+	}
+	annotation.BatchURL = ts.URL
+	return closer
+}
 
 // TODO: IPv6 tests
 func TestParseFirstLine(t *testing.T) {
@@ -37,6 +63,8 @@ func TestCreateTestId(t *testing.T) {
 }
 
 func TestParseLegacyFormatData(t *testing.T) {
+	defer startFakeAnnotator()()
+
 	rawData, err := ioutil.ReadFile("testdata/20160112T00:45:44Z_ALL27409.paris")
 	if err != nil {
 		fmt.Println("cannot load test data")
@@ -58,6 +86,8 @@ func TestParseLegacyFormatData(t *testing.T) {
 }
 
 func TestPTParser(t *testing.T) {
+	defer startFakeAnnotator()()
+
 	rawData, err := ioutil.ReadFile("testdata/20170320T23:53:10Z-172.17.94.34-33456-74.125.224.100-33457.paris")
 	cashedTest, err := parser.Parse(nil, "testdata/20170320T23:53:10Z-172.17.94.34-33456-74.125.224.100-33457.paris", "", rawData, "pt-daily")
 	if err != nil {
@@ -138,6 +168,8 @@ func TestPTParser(t *testing.T) {
 }
 
 func TestPTInserter(t *testing.T) {
+	defer startFakeAnnotator()()
+
 	ins := &inMemoryInserter{}
 	pt := parser.NewPTParser(ins)
 	rawData, err := ioutil.ReadFile("testdata/20170320T23:53:10Z-172.17.94.34-33456-74.125.224.100-33457.paris")
@@ -190,6 +222,8 @@ func TestPTInserter(t *testing.T) {
 }
 
 func TestPTPollutionCheck(t *testing.T) {
+	defer startFakeAnnotator()()
+
 	ins := &inMemoryInserter{}
 	pt := parser.NewPTParser(ins)
 
