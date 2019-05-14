@@ -240,15 +240,17 @@ func GetAndInsertTwoSidedGeoIntoNDTConnSpec(spec schema.Web100ValueMap, timestam
 			Labels{"source": "Missing server side IP."}).Inc()
 	}
 	if cok || sok {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		deadline, _ := ctx.Deadline()
-		defer cancel()
+		//ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		//deadline, _ := ctx.Deadline()
+		//defer cancel()
+		ctx := context.Background()
 		resp, err := v2.GetAnnotations(ctx, annotation.BatchURL, timestamp, reqData)
 		if err != nil {
 			if err.Error() == "context canceled" {
 				// These are NOT timeouts, and the ctx.Err() is nil.
-				timeRemaining := deadline.Sub(time.Now())
-				log.Println("context canceled, time remaining =", timeRemaining, " ctx err:", ctx.Err())
+				//timeRemaining := deadline.Sub(time.Now())
+				//log.Println("context canceled, time remaining =", timeRemaining, " ctx err:", ctx.Err())
+				log.Println("context canceled, ctx err:", ctx.Err())
 				_, file, line, _ := runtime.Caller(0)
 				metrics.AnnotationErrorCount.With(prometheus.Labels{"source": fmt.Sprintf("context canceled %s:%d", file, line)}).Inc()
 			} else {
