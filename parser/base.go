@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -64,6 +65,7 @@ func (buf *BaseRowBuffer) annotateServers() error {
 
 	annSlice := annotation.FetchAllAnnotations(ipSlice, logTime)
 	if annSlice == nil || len(annSlice) != len(ipSlice) {
+		log.Println(len(annSlice), len(ipSlice))
 		return ErrAnnotationError
 	}
 
@@ -93,6 +95,7 @@ func (buf *BaseRowBuffer) annotateClients() error {
 
 	annSlice := annotation.FetchAllAnnotations(ipSlice, logTime)
 	if annSlice == nil || len(annSlice) != len(ipSlice) {
+		log.Println(len(annSlice), len(ipSlice))
 		return ErrAnnotationError
 	}
 
@@ -110,9 +113,9 @@ func (buf *BaseRowBuffer) annotateClients() error {
 // Not thread-safe.  Should only be called by owning thread.
 // TODO should convert this to operate on the rows, instead of the buffer.
 // Then we can do it after TakeRows().
-func (buf *BaseRowBuffer) Annotate(tableBase string) error {
-	metrics.WorkerState.WithLabelValues(tableBase, "annotate").Inc()
-	defer metrics.WorkerState.WithLabelValues(tableBase, "annotate").Dec()
+func (buf *BaseRowBuffer) Annotate(metricLabel string) error {
+	metrics.WorkerState.WithLabelValues(metricLabel, "annotate").Inc()
+	defer metrics.WorkerState.WithLabelValues(metricLabel, "annotate").Dec()
 	if len(buf.rows) == 0 {
 		return nil
 	}
@@ -129,7 +132,7 @@ func (buf *BaseRowBuffer) Annotate(tableBase string) error {
 		return err
 	}
 
-	metrics.AnnotationTimeSummary.With(prometheus.Labels{"test_type": tableBase}).Observe(float64(time.Since(start).Nanoseconds()))
+	metrics.AnnotationTimeSummary.With(prometheus.Labels{"test_type": metricLabel}).Observe(float64(time.Since(start).Nanoseconds()))
 	return nil
 }
 
