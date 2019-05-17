@@ -237,7 +237,7 @@ func (in *BQInserter) updateMetrics(err error) error {
 			in.failures++
 		}
 		// If ALL rows failed, and number of rows is large, just report single failure.
-		if len(typedErr) > 10 && len(typedErr) == in.pending {
+		if len(typedErr) > 20 && len(typedErr) == in.pending {
 			log.Printf("Insert error: %v\n", err)
 			metrics.ErrorCount.WithLabelValues(
 				in.TableBase(), "PutMultiError", "insert row error").
