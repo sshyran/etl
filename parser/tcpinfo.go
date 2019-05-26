@@ -232,14 +232,14 @@ func (p *TCPInfoParser) ParseAndInsert(meta map[string]bigquery.Value, testName 
 		if err != nil {
 			break
 		}
-		snap, decodeErr := snapshot.Decode(rec)
+		meta, snap, decodeErr := snapshot.Decode(rec)
 		if decodeErr != nil {
 			err = decodeErr
 			break
 		}
-		if snap.Metadata != nil {
+		if meta != nil {
 			// TODO - do something with this.
-			snapMeta = *snap.Metadata
+			snapMeta = *meta
 
 		}
 		if snap.Observed != 0 {

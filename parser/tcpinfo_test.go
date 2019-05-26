@@ -145,6 +145,30 @@ func TestTCPParser(t *testing.T) {
 	}
 }
 
+func TestTCPTask(t *testing.T) {
+	os.Setenv("RELEASE_TAG", "foobar")
+	parser.InitParserVersionForTest()
+
+	ins := &inMemoryInserter{}
+	p := parser.NewTCPInfoParser(ins)
+
+	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
+	src, err := localETLSource(filename)
+	if err != nil {
+		t.Fatalf("cannot read testdata.")
+	}
+
+	task := task.NewTask(filename, src, p)
+
+	n, err := task.ProcessAllTests()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 364 {
+		t.Error(n, "!=", 364)
+	}
+}
+
 func BenchmarkTCPParser(b *testing.B) {
 	os.Setenv("RELEASE_TAG", "foobar")
 	parser.InitParserVersionForTest()
