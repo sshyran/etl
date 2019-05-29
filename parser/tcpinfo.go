@@ -80,6 +80,16 @@ type TCPRow struct {
 	Snapshots []*snapshot.Snapshot
 }
 
+func assertTCPRowIsValueSaver(r *TCPRow) {
+	func(bigquery.ValueSaver) {}(r)
+}
+
+func (r *TCPRow) Save() (map[string]bigquery.Value, string, error) {
+	// TODO explicitly provide the schema.
+	ss := bigquery.StructSaver{Schema: nil, InsertID: "", Struct: r}
+	return ss.Save()
+}
+
 // Implement parser.Annotatable
 
 // GetLogTime returns the timestamp that should be used for annotation.

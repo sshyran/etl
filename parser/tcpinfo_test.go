@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/bigquery"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/parser"
 	"github.com/m-lab/etl/storage"
@@ -169,6 +171,38 @@ func TestTCPTask(t *testing.T) {
 	}
 }
 
+func TestBQSaver(t *testing.T) {
+	os.Setenv("RELEASE_TAG", "foobar")
+	parser.InitParserVersionForTest()
+
+	ins := &inMemoryInserter{}
+	p := parser.NewTCPInfoParser(ins)
+
+	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
+	src, err := localETLSource(filename)
+	if err != nil {
+		t.Fatalf("cannot read testdata.")
+	}
+
+	task := task.NewTask(filename, src, p)
+
+	_, err = task.ProcessAllTests()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	row, _ := ins.data[0].(*parser.TCPRow)
+	spew.Dump(row)
+	rowMap, _, _ := row.Save()
+	spew.Dump(rowMap)
+	fs := rowMap["FinalSnapshot"].(map[string]bigquery.Value)
+	idm := fs["InetDiagMsg"].(map[string]bigquery.Value)
+	id := idm["ID"].(map[string]bigquery.Value)
+	if id["SPort"].(int64) != 123 {
+		t.Error()
+	}
+
+}
 func BenchmarkTCPParser(b *testing.B) {
 	os.Setenv("RELEASE_TAG", "foobar")
 	parser.InitParserVersionForTest()
