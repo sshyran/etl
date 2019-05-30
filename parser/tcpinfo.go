@@ -30,163 +30,13 @@ import (
 
 	"github.com/valyala/gozstd"
 
-	"github.com/m-lab/annotation-service/api"
 	v2as "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/etl/annotation"
 	"github.com/m-lab/etl/etl"
-	"github.com/m-lab/go/bqx"
+	"github.com/m-lab/etl/schema"
 	"github.com/m-lab/tcp-info/netlink"
 	"github.com/m-lab/tcp-info/snapshot"
 )
-
-// TODO move to schema/tcpinfo.go
-type ServerInfo struct {
-	IP   string
-	Port uint16
-	IATA string
-
-	Geo     *api.GeolocationIP
-	Network *api.ASData // NOTE: dominant ASN is available at top level.
-}
-
-type ClientInfo struct {
-	IP   string
-	Port uint16
-
-	Geo     *api.GeolocationIP
-	Network *api.ASData // NOTE: dominant ASN is available at top level.
-}
-
-type ParseInfo struct {
-	TaskFileName  string // The tar file containing this test.
-	ParseTime     time.Time
-	ParserVersion string
-}
-
-type TCPRow struct {
-	UUID     string    // Top level just because
-	TestTime time.Time // Must be top level for partitioning
-
-	ClientASN uint32 // Top level for clustering
-	ServerASN uint32 // Top level for clustering
-
-	ParseInfo *ParseInfo
-
-	Server *ServerInfo
-	Client *ClientInfo
-
-	FinalSnapshot *snapshot.Snapshot
-
-	Snapshots []*snapshot.Snapshot
-}
-
-func assertTCPRowIsValueSaver(r *TCPRow) {
-	func(bigquery.ValueSaver) {}(r)
-}
-
-func (r *TCPRow) Save() (map[string]bigquery.Value, string, error) {
-	// TODO explicitly provide the schema.
-	ss := bigquery.StructSaver{Schema: nil, InsertID: "", Struct: r}
-	return ss.Save()
-}
-
-// Implement parser.Annotatable
-
-// GetLogTime returns the timestamp that should be used for annotation.
-func (row *TCPRow) GetLogTime() time.Time {
-	return row.TestTime
-}
-
-// GetClientIPs returns the client (remote) IP for annotation.  See parser.Annotatable
-func (row *TCPRow) GetClientIPs() []string {
-	if row.Client == nil {
-		snap := row.FinalSnapshot
-		if snap == nil || snap.InetDiagMsg == nil {
-			log.Println("No Snapshot")
-			return []string{}
-		}
-		id := snap.InetDiagMsg.ID
-		row.Client = &ClientInfo{IP: id.DstIP().String(), Port: id.DPort()}
-	}
-
-	return []string{row.Client.IP}
-}
-
-// GetServerIP returns the server (local) IP for annotation.  See parser.Annotatable
-func (row *TCPRow) GetServerIP() string {
-	if row.Server == nil {
-		snap := row.FinalSnapshot
-		if snap == nil || snap.InetDiagMsg == nil {
-			log.Println("No Snapshot")
-			return ""
-		}
-		id := snap.InetDiagMsg.ID
-		row.Server = &ServerInfo{IP: id.SrcIP().String(), Port: id.SPort()}
-	}
-
-	if row.Server != nil {
-		return row.Server.IP
-	}
-	log.Println("nil server for row")
-	return row.Server.IP
-}
-
-// AnnotateClients adds the client annotations. See parser.Annotatable
-func (row *TCPRow) AnnotateClients(annMap map[string]*api.Annotations) error {
-	if annMap != nil {
-		ann, ok := annMap[row.Client.IP]
-		if ok && ann.Geo != nil {
-			row.Client.Geo = ann.Geo
-		}
-		if ann.Network != nil {
-			row.Client.Network = ann.Network
-			asn, err := ann.Network.BestASN()
-			if err != nil {
-				log.Println(err)
-			} else {
-
-				row.ClientASN = uint32(asn)
-			}
-		}
-	}
-	return nil
-}
-
-// AnnotateServer adds the server annotations. See parser.Annotatable
-func (row *TCPRow) AnnotateServer(local *api.Annotations) error {
-	row.Client.Geo = local.Geo
-	if local.Network != nil {
-		row.Server.Network = local.Network
-		asn, err := local.Network.BestASN()
-		if err != nil {
-			log.Println(err)
-		} else {
-
-			row.ServerASN = uint32(asn)
-		}
-	}
-	return nil
-}
-
-// Schema returns the Bigquery schema for TCPRow.
-func (row *TCPRow) Schema() (bigquery.Schema, error) {
-	sch, err := bigquery.InferSchema(row)
-	if err != nil {
-		return bigquery.Schema{}, err
-	}
-	subs := map[string]bigquery.FieldSchema{
-		"IDiagSPort":  bigquery.FieldSchema{Name: "IDiagSPort", Description: "", Type: "INTEGER"},
-		"IDiagDPort":  bigquery.FieldSchema{Name: "IDiagDPort", Description: "", Type: "INTEGER"},
-		"IDiagSrc":    bigquery.FieldSchema{Name: "IDiagSrc", Description: "", Type: "STRING"},
-		"IDiagDst":    bigquery.FieldSchema{Name: "IDiagDst", Description: "", Type: "STRING"},
-		"IDiagIf":     bigquery.FieldSchema{Name: "IDiagIf", Description: "", Type: "INTEGER"},
-		"IDiagCookie": bigquery.FieldSchema{Name: "IDiagCookie", Description: "", Type: "INTEGER"},
-	}
-
-	c := bqx.Customize(sch, subs)
-	rr := bqx.RemoveRequired(c)
-	return rr, nil
-}
 
 type TCPInfoParser struct {
 	Base
@@ -269,13 +119,13 @@ func (p *TCPInfoParser) ParseAndInsert(meta map[string]bigquery.Value, testName 
 		return nil // no rows
 	}
 
-	row := TCPRow{}
+	row := schema.TCPRow{}
 	row.Snapshots = snaps
 	row.FinalSnapshot = snaps[len(snaps)-1]
 	row.UUID = snapMeta.UUID
 	row.TestTime = snapMeta.StartTime
 
-	row.ParseInfo = &ParseInfo{ParseTime: time.Now(), ParserVersion: Version()}
+	row.ParseInfo = &schema.ParseInfo{ParseTime: time.Now(), ParserVersion: Version()}
 
 	if meta["filename"] != nil {
 		row.ParseInfo.TaskFileName = meta["filename"].(string)

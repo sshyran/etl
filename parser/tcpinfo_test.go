@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,27 +13,15 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/parser"
+	"github.com/m-lab/etl/schema"
 	"github.com/m-lab/etl/storage"
 	"github.com/m-lab/etl/task"
-	"github.com/m-lab/go/bqx"
 )
 
 func assertTCPInfoParser(in *parser.TCPInfoParser) {
 	func(p etl.Parser) {}(in)
-}
-
-func TestDump(t *testing.T) {
-	sch, _ := (*parser.TCPRow)(nil).Schema()
-
-	rr := bqx.RemoveRequired(sch)
-	pp, err := bqx.PrettyPrint(rr, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Print(pp)
 }
 
 func localETLSource(fn string) (*storage.ETLSource, error) {
@@ -97,7 +84,7 @@ func TestTCPParser(t *testing.T) {
 	if len(ins.data) < 1 {
 		t.Fatal("Should have at least one inserted row")
 	}
-	inserted, ok := ins.data[0].(*parser.TCPRow)
+	inserted, ok := ins.data[0].(*schema.TCPRow)
 	if !ok {
 		t.Fatal("not a TCPRow")
 	}
@@ -126,7 +113,7 @@ func TestTCPParser(t *testing.T) {
 	sumSnaps := int64(0)
 	for _, r := range ins.data {
 		jsonBytes, _ := json.Marshal(r)
-		row, _ := r.(*parser.TCPRow)
+		row, _ := r.(*schema.TCPRow)
 		sumSnaps += int64(len(row.Snapshots))
 		if len(jsonBytes) > largest {
 			largest = len(jsonBytes)
@@ -138,7 +125,7 @@ func TestTCPParser(t *testing.T) {
 	t.Log("Total of", sumSnaps, "snapshots decoded and marshalled")
 	t.Log("Average", decodeTime.Nanoseconds()/sumSnaps, "nsec/snap to decode", marshalTime.Nanoseconds()/sumSnaps, "nsec/snap to marshal")
 
-	row, _ := ins.data[0].(*parser.TCPRow)
+	row, _ := ins.data[0].(*schema.TCPRow)
 	snapJson, _ := json.Marshal(row.FinalSnapshot)
 	log.Println(string(snapJson))
 
@@ -191,10 +178,8 @@ func TestBQSaver(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	row, _ := ins.data[0].(*parser.TCPRow)
-	spew.Dump(row)
+	row, _ := ins.data[0].(*schema.TCPRow)
 	rowMap, _, _ := row.Save()
-	spew.Dump(rowMap)
 	fs := rowMap["FinalSnapshot"].(map[string]bigquery.Value)
 	idm := fs["InetDiagMsg"].(map[string]bigquery.Value)
 	id := idm["ID"].(map[string]bigquery.Value)
