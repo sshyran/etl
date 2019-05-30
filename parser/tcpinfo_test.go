@@ -198,10 +198,9 @@ func TestBQSaver(t *testing.T) {
 	fs := rowMap["FinalSnapshot"].(map[string]bigquery.Value)
 	idm := fs["InetDiagMsg"].(map[string]bigquery.Value)
 	id := idm["ID"].(map[string]bigquery.Value)
-	if id["SPort"].(int64) != 123 {
-		t.Error()
+	if id["IDiagSPort"].(int64) != 3010 {
+		t.Error(idm)
 	}
-
 }
 func BenchmarkTCPParser(b *testing.B) {
 	os.Setenv("RELEASE_TAG", "foobar")
