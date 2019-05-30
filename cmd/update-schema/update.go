@@ -5,16 +5,16 @@ import (
 	"log"
 	"time"
 
+	"github.com/m-lab/etl/schema"
 	"github.com/m-lab/go/rtx"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/m-lab/etl/parser"
 	"github.com/m-lab/go/bqx"
 	"google.golang.org/api/googleapi"
 )
 
 func CreateOrUpdateTCP(project string) {
-	row := parser.TCPRow{}
+	row := schema.TCPRow{}
 	schema, err := row.Schema()
 	rtx.Must(err, "TCPRow.Schema")
 
