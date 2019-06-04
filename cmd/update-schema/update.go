@@ -18,7 +18,7 @@ func CreateOrUpdateTCP(project string) {
 	schema, err := row.Schema()
 	rtx.Must(err, "TCPRow.Schema")
 
-	name := project + ".ndt.tcpinfo"
+	name := project + ".base_tables.tcpinfo"
 	log.Println("Using:", name)
 	pdt, err := bqx.ParsePDT(name)
 	rtx.Must(err, "ParsePDT")
@@ -47,7 +47,7 @@ func CreateOrUpdateTCP(project string) {
 }
 
 func main() {
-	CreateOrUpdateTCP("mlab-testing")
+	//CreateOrUpdateTCP("mlab-testing")
 	CreateOrUpdateTCP("mlab-sandbox")
 	CreateOrUpdateTCP("mlab-staging")
 }
