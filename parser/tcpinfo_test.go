@@ -126,6 +126,10 @@ func TestTCPParser(t *testing.T) {
 	t.Log("Average", decodeTime.Nanoseconds()/sumSnaps, "nsec/snap to decode", marshalTime.Nanoseconds()/sumSnaps, "nsec/snap to marshal")
 
 	row, _ := ins.data[0].(*schema.TCPRow)
+	// Spot check the SockID.SPort.
+	if row.SockID.SPort != 3010 {
+		t.Error("SPort should be 3010", row.SockID)
+	}
 	snapJson, _ := json.Marshal(row.FinalSnapshot)
 	log.Println(string(snapJson))
 
@@ -180,11 +184,13 @@ func TestBQSaver(t *testing.T) {
 
 	row, _ := ins.data[0].(*schema.TCPRow)
 	rowMap, _, _ := row.Save()
-	fs := rowMap["FinalSnapshot"].(map[string]bigquery.Value)
-	idm := fs["InetDiagMsg"].(map[string]bigquery.Value)
-	id := idm["ID"].(map[string]bigquery.Value)
-	if id["IDiagSPort"].(int64) != 3010 {
-		t.Error(idm)
+	sid, ok := rowMap["SockID"]
+	if !ok {
+		t.Fatal("Should have SockID")
+	}
+	id := sid.(map[string]bigquery.Value)
+	if id["SPort"].(uint16) != 3010 {
+		t.Error(id)
 	}
 }
 func BenchmarkTCPParser(b *testing.B) {

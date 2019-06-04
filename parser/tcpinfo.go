@@ -122,6 +122,9 @@ func (p *TCPInfoParser) ParseAndInsert(meta map[string]bigquery.Value, testName 
 	row := schema.TCPRow{}
 	row.Snapshots = snaps
 	row.FinalSnapshot = snaps[len(snaps)-1]
+	if row.FinalSnapshot.InetDiagMsg != nil {
+		row.SockID = row.FinalSnapshot.InetDiagMsg.ID.GetSockID()
+	}
 	row.UUID = snapMeta.UUID
 	row.TestTime = snapMeta.StartTime
 
