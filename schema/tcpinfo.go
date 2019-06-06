@@ -103,22 +103,35 @@ func (row *TCPRow) GetLogTime() time.Time {
 
 // GetClientIPs returns the client (remote) IP for annotation.  See parser.Annotatable
 func (row *TCPRow) GetClientIPs() []string {
-	return []string{row.SockID.DstIP}
+	// Ideally, use the Client.IP.  This could conceivably be different from the SockID.DstIP, e.g.
+	// in the case of 6to4 routing
+	if row.Client == nil {
+		return []string{row.SockID.DstIP}
+	}
+	return []string{row.Client.IP}
 }
 
 // GetServerIP returns the server (local) IP for annotation.  See parser.Annotatable
 func (row *TCPRow) GetServerIP() string {
-	return row.SockID.SrcIP
+	// Ideally, use the Server.IP.  This could conceivably be different from the SockID.DstIP, e.g.
+	// in the case of 6to4 routing
+	if row.Server == nil {
+		return row.SockID.SrcIP
+	}
+	return row.Server.IP
 }
 
 // AnnotateClients adds the client annotations. See parser.Annotatable
 // annMap must not be null
 func (row *TCPRow) AnnotateClients(annMap map[string]*api.Annotations) error {
-	ip := row.SockID.DstIP
 	if row.Client == nil {
-		row.Client = &ClientInfo{IP: ip, Port: row.SockID.DPort}
+		// Just return if Client has not been initialized.
+		metrics.AnnotationMissingCount.WithLabelValues("nil ClientInfo").Inc()
+		return nil
 	}
-	ann, ok := annMap[ip]
+	// Use the Client.IP.  This could conceivably be different from the SockID.DstIP, e.g.
+	// in the case of 6to4 routing
+	ann, ok := annMap[row.Client.IP]
 	if !ok {
 		metrics.AnnotationMissingCount.WithLabelValues("No annotation for IP").Inc()
 		return nil
@@ -146,10 +159,9 @@ func (row *TCPRow) AnnotateClients(annMap map[string]*api.Annotations) error {
 // AnnotateServer adds the server annotations. See parser.Annotatable
 // local must not be nil
 func (row *TCPRow) AnnotateServer(local *api.Annotations) error {
-	if row.Server == nil {
-		row.Server = &ServerInfo{IP: row.SockID.SrcIP, Port: row.SockID.SPort}
-	}
-	if local == nil {
+	if row.Server == nil || local == nil {
+		// Just return if there are any problems.
+		metrics.AnnotationMissingCount.WithLabelValues("nil ServerInfo or param").Inc()
 		return nil
 	}
 	row.Server.Geo = local.Geo
