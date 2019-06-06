@@ -8,6 +8,7 @@ package task
 import (
 	"io"
 	"log"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -22,6 +23,43 @@ import (
 // multiple large files at on multiple tasks.
 // This can be overridden with SetMaxFileSize()
 const DefaultMaxFileSize = 200 * 1024 * 1024
+
+// Batch handles the processing of all files in a date prefix.
+type Batch struct {
+	prefix  string   // The gs bucket date prefix to process.
+	pending []string // Files not yet started
+	working []Task   // Tasks in flight
+	done    []string // Files that have been completed.
+}
+
+var batchLock = &sync.Mutex{}
+
+// The Batch in flight, if any.
+var batch *Batch
+
+// The batch process (string) to start next.
+var pendingPrefix string
+
+func runBatch() {
+
+}
+
+// AddBatch will start a batch prefix, or make it pending.
+// Returns true if the batch was accepted, false if rejected.
+func AddBatch(prefix string) bool {
+	batchLock.Lock()
+	defer batchLock.Unlock()
+	if len(pendingPrefix) > 0 {
+		return false
+	}
+	if batch == nil {
+		batch = &Batch{prefix: prefix}
+		go runBatch()
+	} else {
+		pendingPrefix = prefix
+	}
+	return true
+}
 
 // Task contains the state required to process a single task tar file.
 // TODO(dev) Add unit tests for meta data.
