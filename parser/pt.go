@@ -13,6 +13,8 @@ import (
 
 	"cloud.google.com/go/bigquery"
 
+	v2as "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/etl/annotation"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/metrics"
 	"github.com/m-lab/etl/schema"
@@ -42,8 +44,8 @@ type cachedPTData struct {
 }
 
 type PTParser struct {
-	inserter etl.Inserter
-	etl.RowStats
+	etl.Inserter
+  ann v2as.Annotator
 	// Care should be taken to ensure this does not accumulate many rows and
 	// lead to OOM problems.
 	previousTests []cachedPTData
@@ -69,12 +71,15 @@ const IPv4_AF int32 = 2
 const IPv6_AF int32 = 10
 const PTBufferSize int = 2
 
-func NewPTParser(ins etl.Inserter) *PTParser {
-	return &PTParser{
-		inserter:      ins,
-		RowStats:      ins,
-		previousTests: []cachedPTData{},
+func NewPTParser(ins etl.Inserter, ann ...v2as.Annotator) *TCPInfoParser {
+	bufSize := etl.PT.BQBufferSize()
+	var annotator v2as.Annotator
+	if len(ann) > 0 && ann[0] != nil {
+		annotator = ann[0]
+	} else {
+		annotator = v2as.GetAnnotator(annotation.BatchURL)
 	}
+	return &PTParser{ins, ann}
 }
 
 // ProcessAllNodes take the array of the Nodes, and generate one ParisTracerouteHop entry from each node.
@@ -188,14 +193,26 @@ func (pt *PTParser) TaskError() error {
 }
 
 func (pt *PTParser) TableName() string {
-	return pt.inserter.TableBase()
+	return pt.TableBase()
 }
 
-func (pt *PTParser) FullTableName() string {
-	return pt.inserter.FullTableName()
-}
+// InsertOneTest add annotation to IPs in one test and insert it as one hop per row.
+func (pt *PTParser) InsertOneTest (oneTest cachedPTData) {
+	// Create batch annotation requests w/ all hops IP.
+	var requestIPs map[string]bool
+	requestIPs[oneTest.ConnSpec.Server_ip] = true
+	requestIPs[oneTest.ConnSpec.Client_ip] = true
+	for _, hop := range oneTest.Hops {
+		requestIPs[hop.Src_ip] = true
+		requestIPs[hop.Dest_ip] = true
+	}
+	batchRequest := make([]string, 0, len(requestIPs))
+	for key, _ := range requestIPs {
+		batchRequest := append(batchRequest, key)
+	}
+	response, err := pt.ann.GetAnnotations(context.Background(), logTime, requestIPs, "PT")
+  response, err := pt.GetPTAnnotation(batchRequest, oneTest.LogTime)
 
-func (pt *PTParser) InsertOneTest(oneTest cachedPTData) {
 	for _, hop := range oneTest.Hops {
 		ptTest := schema.PT{
 			TestID:               oneTest.TestID,
@@ -208,8 +225,14 @@ func (pt *PTParser) InsertOneTest(oneTest cachedPTData) {
 			Type:                 int32(2),
 			Project:              int32(3),
 		}
-		err := pt.inserter.InsertRow(ptTest)
-		if err != nil {
+    ptTest.AnnotatePT()
+		err = pt.AddRow(&ptTest)
+	  if err == etl.ErrBufferFull {
+		  // Flush asynchronously, to improve throughput.
+		  pt.PutAsync(pt.TakeRows())
+		  err = pt.AddRow(&ptTest)
+	  }
+		else if err != nil {
 			metrics.ErrorCount.WithLabelValues(
 				pt.TableName(), "pt", "insert-err").Inc()
 			log.Printf("insert-err: %v\n", err)
@@ -261,7 +284,7 @@ func (pt *PTParser) IsParsable(testName string, data []byte) (string, bool) {
 	return "unknown", false
 }
 
-// ParseAndInsert parses a paris-traceroute log file and inserts results into a single row.
+// ParseAndInsert parses a paris-traceroute log file and inserts results.
 func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName string, rawContent []byte) error {
 	metrics.WorkerState.WithLabelValues(pt.TableName(), "pt").Inc()
 	defer metrics.WorkerState.WithLabelValues(pt.TableName(), "pt").Dec()
@@ -569,10 +592,6 @@ func Parse(meta map[string]bigquery.Value, testName string, testId string, rawCo
 		Client_af:      IPv4_AF,
 		Data_direction: 0,
 	}
-
-	// Only annotate if flag enabled...
-	AddGeoDataPTConnSpec(connSpec, logTime)
-	AddGeoDataPTHopBatch(PTHops, logTime)
 
 	return cachedPTData{
 		TestID:           testId,
