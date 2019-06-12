@@ -35,6 +35,7 @@ type ClientInfo struct {
 // ParseInfo provides details about the parsing of this row.
 type ParseInfo struct {
 	TaskFileName  string // The tar file containing this test.
+	TestFileName  string // the name of the individual test file.  Note there may be more than one per connection.
 	ParseTime     time.Time
 	ParserVersion string
 }
