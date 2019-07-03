@@ -144,8 +144,5 @@ OUTER:
 	}
 
 	// Check if the overall task is OK, or should be rejected.
-	if tt.Parser.TaskError() != nil {
-		return files, tt.Parser.TaskError()
-	}
-	return files, nil
+	return files, tt.Parser.TaskError()
 }
