@@ -111,17 +111,6 @@ func worker(rwr http.ResponseWriter, rq *http.Request) {
 		metrics.CountPanics(recover(), "worker")
 	}()
 
-	// Throttle by grabbing a semaphore from channel.
-	if shouldThrottle() {
-		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
-		rwr.WriteHeader(http.StatusTooManyRequests)
-		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
-		return
-	}
-
-	// Decrement counter when worker finishes.
-	defer decrementInFlight()
-
 	var err error
 	retryCountStr := rq.Header.Get("X-AppEngine-TaskRetryCount")
 	retryCount := 0
@@ -131,6 +120,22 @@ func worker(rwr http.ResponseWriter, rq *http.Request) {
 			log.Printf("Invalid retries string: %s\n", retryCountStr)
 		}
 	}
+
+	// Throttle by grabbing a semaphore from channel.
+	if shouldThrottle() {
+		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
+		if retryCount > 0 {
+			// HACK to learn about info in header.  May need to query the task queue for more info.
+			log.Printf("%+v %s\n", rq.Header, rq.Header.Get("X-AppEngine-TaskPreviousResponse"))
+		}
+		rwr.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
+		return
+	}
+
+	// Decrement counter when worker finishes.
+	defer decrementInFlight()
+
 	executionCountStr := rq.Header.Get("X-AppEngine-TaskExecutionCount")
 	executionCount := 0
 	if executionCountStr != "" {
