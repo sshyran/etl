@@ -9,13 +9,14 @@ package limiter
 
 import (
 	"log"
+	"math"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
 )
 
-var monitor = StartCPUMonitor(24, 5*time.Second)
+// var monitor = StartCPUMonitor(24, 5*time.Second)
 
 func init() {
 }
@@ -51,6 +52,10 @@ func StartCPUMonitor(snaps int, interval time.Duration) *CPUMonitor {
 	go m.run()
 
 	return &m
+}
+
+func (m *CPUMonitor) Kill() {
+	m.ticker.Stop()
 }
 
 // run gathers periodic snapshots.
@@ -121,4 +126,59 @@ func (l *Limiter) Get() *Token {
 }
 func (l *Limiter) GetNonBlocking() *Token {
 	return nil
+}
+
+type LatencyReport struct {
+	Fast float64 // Fast filtered latency in seconds
+	Slow float64 // Slow filtered latency in seconds
+	Rate float64 // Rate of change of latency, in seconds/second.
+}
+
+// LatencyMonitor monitors the latency of the goroutine scheduling.
+type LatencyMonitor struct {
+	interval, fastInterval, slowInterval time.Duration
+	ticker                               *time.Ticker
+	start                                time.Time
+	fastSum, slowSum                     float64 // fast and slow sumsq filters
+	rate                                 float64 // rate of change, filtered at fastInterval
+}
+
+// StartLatencyMonitor creates and starts a LatencyMonitor
+func StartLatencyMonitor(sample time.Duration, fast time.Duration, slow time.Duration) *LatencyMonitor {
+	if sample <= 0 || fast <= sample || slow <= fast {
+		return nil
+	}
+	m := LatencyMonitor{interval: sample, fastInterval: fast, slowInterval: slow, ticker: time.NewTicker(sample)}
+	go m.run()
+
+	return &m
+}
+
+func (m *LatencyMonitor) run() {
+	last := time.Now()
+	m.start = last
+	for ; ; <-m.ticker.C {
+		now := time.Now()
+
+		fast := m.fastSum
+
+		diff := now.Sub(last).Seconds() - m.interval.Seconds()
+		m.fastSum = ((m.fastInterval-m.interval).Seconds()*m.fastSum + m.interval.Seconds()*(diff*diff)) / m.fastInterval.Seconds()
+		m.slowSum = ((m.slowInterval-m.interval).Seconds()*m.slowSum + m.interval.Seconds()*(diff*diff)) / m.slowInterval.Seconds()
+		rate := (math.Sqrt(m.fastSum) - math.Sqrt(fast)) / m.interval.Seconds()
+		m.rate = ((m.fastInterval-m.interval).Seconds()*m.rate + m.interval.Seconds()*rate) / m.fastInterval.Seconds()
+
+		last = now
+	}
+}
+
+// Report prints a report and returns fast and slow metrics in seconds.
+func (m *LatencyMonitor) Report() LatencyReport {
+	r := LatencyReport{}
+	// Ok to access concurrently, or should these be atomic?
+	// Note that these are float64 values.
+	r.Fast = math.Sqrt(m.fastSum)
+	r.Slow = math.Sqrt(m.slowSum)
+	r.Rate = m.rate
+	return r
 }
