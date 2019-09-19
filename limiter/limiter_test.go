@@ -19,7 +19,7 @@ func init() {
 }
 
 func TestBasic(t *testing.T) {
-	m := limiter.StartCPUMonitor(24, 50*time.Millisecond)
+	m := limiter.StartCPUMonitor(25, 50*time.Millisecond)
 	end := time.Now().Add(2 * time.Second)
 	x := 5.0
 	for time.Now().Before(end) {

@@ -28,6 +28,7 @@ type userSys struct {
 
 // A CPUMonitor takes CPU utilization snapshots, and reports requested interval averages.
 type CPUMonitor struct {
+	size      int // Number of entries - 1.
 	interval  time.Duration
 	ticker    *time.Ticker
 	lock      sync.Mutex
@@ -47,7 +48,7 @@ func StartCPUMonitor(snaps int, interval time.Duration) *CPUMonitor {
 		snapshots[i] = us
 	}
 
-	m := CPUMonitor{ticker: ticker, snapshots: snapshots}
+	m := CPUMonitor{size: snaps - 1, interval: interval, ticker: ticker, snapshots: snapshots}
 
 	go m.run()
 
@@ -71,28 +72,28 @@ func (m *CPUMonitor) run() {
 		m.lock.Unlock()
 
 		a, b := m.intervals(2, 24)
-		log.Printf("%5.3f %5.3f\n", a, b)
+		log.Printf("%10.7f %10.7f\n", a, b)
 	}
 }
 
 // The average utilization for last 10 seconds (up to 5 seconds in the past), and last two minutes.
 func (m *CPUMonitor) intervals(j, k int) (float64, float64) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	end := len(m.snapshots) - 1
-	if j <= 0 || k <= 0 || j > end || k > end {
+	if j <= 0 || k <= 0 || j > m.size || k > m.size {
 		return 0, 0
 	}
+	m.lock.Lock()
 
-	last := m.snapshots[end]
-	jValues := m.snapshots[end-j]
-	kValues := m.snapshots[end-k]
+	last := m.snapshots[m.size]
+	jValues := m.snapshots[m.size-j]
+	kValues := m.snapshots[m.size-k]
+	m.lock.Unlock()
 
-	lastTime := (last.user + last.sys) / 1000000      // milliseconds
-	jMillis := (jValues.user + jValues.sys) / 1000000 // milliseconds
-	kMillis := (kValues.user + kValues.sys) / 1000000 // milliseconds
+	lastTime := float64(last.user+last.sys) / 1000000.0      // milliseconds
+	jMillis := float64(jValues.user+jValues.sys) / 1000000.0 // milliseconds
+	kMillis := float64(kValues.user+kValues.sys) / 1000000.0 // milliseconds
 
-	milliCPUPerInterval := float64(m.interval.Milliseconds() * int64(runtime.NumCPU()))
+	milliCPUPerInterval := 1000.0 * (m.interval.Seconds() * float64(runtime.NumCPU()))
+	log.Println(lastTime, jMillis, kMillis, milliCPUPerInterval)
 	return float64(lastTime-jMillis) / (float64(j) * milliCPUPerInterval),
 		float64(lastTime-kMillis) / (float64(k) * milliCPUPerInterval)
 }
