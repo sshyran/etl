@@ -18,12 +18,33 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+func spinFor(t time.Duration) {
+	go func() {
+		end := time.Now().Add(t)
+		x := 5.0
+		for time.Now().Before(end) {
+			x = math.Sqrt(x) + 2.0
+		}
+	}()
+}
+
 func TestBasic(t *testing.T) {
+	start := time.Now()
 	m := limiter.StartCPUMonitor(25, 50*time.Millisecond)
-	end := time.Now().Add(2 * time.Second)
-	x := 5.0
-	for time.Now().Before(end) {
-		x = math.Sqrt(x) + 2.0
+	go func() {
+		end := time.Now().Add(time.Duration(2*runtime.NumCPU()) * time.Second)
+
+		for time.Now().Before(end) {
+			a, b := m.GetAverages(2, 24)
+			log.Printf("%6.2f: %10.7f %10.7f\n", time.Now().Sub(start).Seconds(), a, b)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	// Add a new spin loop every 100 milliseconds.
+	for i := 0; i < 2*runtime.NumCPU(); i++ {
+		spinFor(5 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	m.Kill()
 }

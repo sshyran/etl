@@ -8,7 +8,6 @@
 package limiter
 
 import (
-	"log"
 	"math"
 	"runtime"
 	"sync"
@@ -22,8 +21,9 @@ func init() {
 }
 
 type userSys struct {
-	user int64 // nanoseconds of user time
-	sys  int64 // nanoseconds of system time
+	snapTime time.Time
+	user     int64 // nanoseconds of user time
+	sys      int64 // nanoseconds of system time
 }
 
 // A CPUMonitor takes CPU utilization snapshots, and reports requested interval averages.
@@ -42,11 +42,13 @@ func StartCPUMonitor(snaps int, interval time.Duration) *CPUMonitor {
 	}
 	ticker := time.NewTicker(interval)
 	snapshots := make([]userSys, snaps)
+	now := time.Now().Add(-time.Second)
 	ru := syscall.Rusage{}
-	us := userSys{ru.Utime.Nano(), ru.Stime.Nano()}
+	us := userSys{now, ru.Utime.Nano(), ru.Stime.Nano()}
 	for i := range snapshots {
 		snapshots[i] = us
 	}
+	snapshots[len(snapshots)-1].snapTime = time.Now()
 
 	m := CPUMonitor{size: snaps - 1, interval: interval, ticker: ticker, snapshots: snapshots}
 
@@ -64,20 +66,17 @@ func (m *CPUMonitor) Kill() {
 func (m *CPUMonitor) run() {
 	for range m.ticker.C {
 		ru := syscall.Rusage{}
+		now := time.Now()
 		syscall.Getrusage(0, &ru)
-		us := userSys{ru.Utime.Nano(), ru.Stime.Nano()}
-		log.Println(us)
+		us := userSys{now, ru.Utime.Nano(), ru.Stime.Nano()}
 		m.lock.Lock()
 		m.snapshots = append(m.snapshots[1:], us)
 		m.lock.Unlock()
-
-		a, b := m.intervals(2, 24)
-		log.Printf("%10.7f %10.7f\n", a, b)
 	}
 }
 
-// The average utilization for last 10 seconds (up to 5 seconds in the past), and last two minutes.
-func (m *CPUMonitor) intervals(j, k int) (float64, float64) {
+// GetAverages returns average utilizations for the given intervals.
+func (m *CPUMonitor) GetAverages(j, k int) (float64, float64) {
 	if j <= 0 || k <= 0 || j > m.size || k > m.size {
 		return 0, 0
 	}
@@ -88,14 +87,15 @@ func (m *CPUMonitor) intervals(j, k int) (float64, float64) {
 	kValues := m.snapshots[m.size-k]
 	m.lock.Unlock()
 
-	lastTime := float64(last.user+last.sys) / 1000000.0      // milliseconds
-	jMillis := float64(jValues.user+jValues.sys) / 1000000.0 // milliseconds
-	kMillis := float64(kValues.user+kValues.sys) / 1000000.0 // milliseconds
+	lastVal := float64(last.user+last.sys) / 1000000000.0
+	jVal := float64(jValues.user+jValues.sys) / 1000000000.0
+	kVal := float64(kValues.user+kValues.sys) / 1000000000.0
 
-	milliCPUPerInterval := 1000.0 * (m.interval.Seconds() * float64(runtime.NumCPU()))
-	log.Println(lastTime, jMillis, kMillis, milliCPUPerInterval)
-	return float64(lastTime-jMillis) / (float64(j) * milliCPUPerInterval),
-		float64(lastTime-kMillis) / (float64(k) * milliCPUPerInterval)
+	jInterval := float64(runtime.NumCPU()) * last.snapTime.Sub(jValues.snapTime).Seconds()
+	kInterval := float64(runtime.NumCPU()) * last.snapTime.Sub(kValues.snapTime).Seconds()
+
+	return float64(lastVal-jVal) / jInterval,
+		float64(lastVal-kVal) / kInterval
 }
 
 var limiters = make([]*Limiter, 0, 10)
