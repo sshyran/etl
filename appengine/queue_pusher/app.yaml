@@ -1,5 +1,5 @@
-runtime: go
-api_version: go1
+runtime: custom
+env: flex
 service: queue-pusher
 
 handlers:
