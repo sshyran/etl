@@ -88,17 +88,17 @@ func (row *PTTest) GetServerIP() string {
 }
 
 func (row *PTTest) AnnotateHops(annMap map[string]*api.Annotations) error {
-	for index, _ := range row.Hop {
-		ann, ok := annMap[row.Hop[index].Source.IP]
+	for _, hop := range row.Hop {
+		ip := hop.Source.IP
+		ann, ok := annMap[ip]
 		if !ok {
 			metrics.AnnotationMissingCount.WithLabelValues("No annotation for PT hop").Inc()
-			continue
 		}
 		if ann.Geo == nil {
 			metrics.AnnotationMissingCount.WithLabelValues("Empty PT Geo").Inc()
 		} else {
-			row.Hop[index].Source.City = ann.Geo.City
-			row.Hop[index].Source.CountryCode = ann.Geo.CountryCode
+			hop.Source.City = ann.Geo.City
+			hop.Source.CountryCode = ann.Geo.CountryCode
 		}
 		if ann.Network == nil {
 			metrics.AnnotationMissingCount.WithLabelValues("Empty PT ASN").Inc()
@@ -107,7 +107,7 @@ func (row *PTTest) AnnotateHops(annMap map[string]*api.Annotations) error {
 			if err != nil {
 				metrics.AnnotationMissingCount.WithLabelValues("PT Hop ASN failed").Inc()
 			}
-			row.Hop[index].Source.ASN = uint32(asn)
+			hop.Source.ASN = uint32(asn)
 		}
 	}
 	return nil
