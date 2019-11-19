@@ -4,6 +4,7 @@ package parser
 // The format of legacy test file can be found at https://paris-traceroute.net/.
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 
+	"github.com/google/go-jsonnet"
 	v2as "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/etl/annotation"
 	"github.com/m-lab/etl/etl"
@@ -21,17 +23,264 @@ import (
 	"github.com/m-lab/etl/schema"
 )
 
+// -------------------------------------------------
+// The following are struct and funcs shared by legacy parsing and Json parsing.
+// -------------------------------------------------
 type PTFileName struct {
 	Name string
 }
 
 func (f *PTFileName) GetDate() (string, bool) {
-	if len(f.Name) > 18 {
-		// Return date string in format "20170320T23:53:10Z"
-		return f.Name[0:18], true
+	i := strings.Index(f.Name, "Z")
+	if i >= 15 {
+		// covert date like "20170320T23:53:10Z" or "20170320T235310Z" into one format
+		return strings.Replace(f.Name[0:i+1], ":", "", -1), true
 	}
 	return "", false
 }
+
+// Return timestamp parsed from file name.
+func GetLogtime(filename PTFileName) (time.Time, error) {
+	date, success := filename.GetDate()
+	if !success {
+		return time.Time{}, errors.New("no date in filename")
+	}
+
+	return time.Parse("20060102T150405Z", date)
+}
+
+// -------------------------------------------------
+// The following are structs and funcs used by JSON parsing.
+// -------------------------------------------------
+
+type TS struct {
+	Sec  int64 `json:"sec"`
+	Usec int64 `json:"usec"`
+}
+
+type Reply struct {
+	Rx         TS      `json:"rx"`
+	Ttl        int     `json:"ttl"`
+	Rtt        float64 `json:"rtt"`
+	Icmp_type  int     `json:"icmp_type"`
+	Icmp_code  int     `json:"icmp_code"`
+	Icmp_q_tos int     `json:"icmp_q_tos"`
+	Icmp_q_ttl int     `json:"icmp_q_ttl"`
+}
+
+type Probe struct {
+	Tx      TS      `json:"tx"`
+	Replyc  int     `json:"replyc"`
+	Ttl     int64   `json:"ttl"`
+	Attempt int     `json:"attempt"`
+	Flowid  int64   `json:"flowid"`
+	Replies []Reply `json:"replies"`
+}
+
+type ScamperLink struct {
+	Addr   string  `json:"addr"`
+	Probes []Probe `json:"probes"`
+}
+
+type ScamperNode struct {
+	Addr  string          `json:"addr"`
+	Name  string          `json:"name"`
+	Q_ttl int             `json:"q_ttl"`
+	Linkc int64           `json:"linkc"`
+	Links [][]ScamperLink `json:"links"`
+}
+
+// There are 4 lines in the traceroute test .jsonl file.
+// The first line is defined in Metadata
+// The second line is defined in CyclestartLine
+// The third line is defined in TracelbLine
+// The fourth line is defined in CyclestopLine
+
+type Metadata struct {
+	UUID                    string
+	TracerouteCallerVersion string
+	CachedResult            bool
+	CachedUUID              string
+}
+
+type CyclestartLine struct {
+	Type       string  `json:"type"`
+	List_name  string  `json:"list_name"`
+	ID         float64 `json:"id"`
+	Hostname   string  `json:"hostname"`
+	Start_time float64 `json:"start_time"`
+}
+
+type TracelbLine struct {
+	Type         string        `json:"type"`
+	Version      string        `json:"version"`
+	Userid       float64       `json:"userid"`
+	Method       string        `json:"method"`
+	Src          string        `json:"src"`
+	Dst          string        `json:"dst"`
+	Start        TS            `json:"start"`
+	Probe_size   float64       `json:"probe_size"`
+	Firsthop     float64       `json:"firsthop"`
+	Attempts     float64       `json:"attempts"`
+	Confidence   float64       `json:"confidence"`
+	Tos          float64       `json:"tos"`
+	Gaplint      float64       `json:"gaplint"`
+	Wait_timeout float64       `json:"wait_timeout"`
+	Wait_probe   float64       `json:"wait_probe"`
+	Probec       float64       `json:"probec"`
+	Probec_max   float64       `json:"probec_max"`
+	Nodec        float64       `json:"nodec"`
+	Linkc        float64       `json:"linkc"`
+	Nodes        []ScamperNode `json:"nodes"`
+}
+
+type CyclestopLine struct {
+	Type      string  `json:"type"`
+	List_name string  `json:"list_name"`
+	ID        float64 `json:"id"`
+	Hostname  string  `json:"hostname"`
+	Stop_time float64 `json:"stop_time"`
+}
+
+// ParseJSON the raw jsonl test file into schema.PTTest.
+func ParseJSON(testName string, rawContent []byte, tableName string, taskFilename string) (schema.PTTest, error) {
+	metrics.WorkerState.WithLabelValues(tableName, "pt-json-parse").Inc()
+	defer metrics.WorkerState.WithLabelValues(tableName, "pt-json-parse").Dec()
+
+	// Get the logtime
+	logTime, err := GetLogtime(PTFileName{Name: filepath.Base(testName)})
+	if err != nil {
+		return schema.PTTest{}, err
+	}
+
+	// Split the JSON file and parse it line by line.
+	var uuid, version string
+	var resultFromCache bool
+	var hops []schema.ScamperHop
+	var meta Metadata
+	var cycleStart CyclestartLine
+	var tracelb TracelbLine
+	var cycleStop CyclestopLine
+
+	jsonStrings := strings.Split(string(rawContent[:]), "\n")
+
+	if len(jsonStrings) != 5 {
+		log.Println("Invalid test", taskFilename, "  ", testName)
+		log.Println(len(jsonStrings))
+		return schema.PTTest{}, errors.New("Invalid test")
+	}
+
+	// Parse the first line for meta info.
+	err = json.Unmarshal([]byte(jsonStrings[0]), &meta)
+	if err != nil {
+		metrics.ErrorCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		metrics.TestCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		return schema.PTTest{}, errors.New("empty UUID")
+	}
+	uuid = meta.UUID
+	version = meta.TracerouteCallerVersion
+	resultFromCache = meta.CachedResult
+
+	// Some early stage tests only has UUID field in this meta line.
+	err = json.Unmarshal([]byte(jsonStrings[1]), &cycleStart)
+	if err != nil {
+		metrics.ErrorCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		metrics.TestCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		return schema.PTTest{}, err
+	}
+
+	// Parse the line in struct
+	err = json.Unmarshal([]byte(jsonStrings[2]), &tracelb)
+	if err != nil {
+		// Some early stage scamper output has JSON grammar errors that can be fixed by
+		// extra reprocessing using jsonnett
+		// TODO: this is a hack. We should see if this can be simplified.
+		vm := jsonnet.MakeVM()
+		output, err := vm.EvaluateSnippet("file", jsonStrings[2])
+		err = json.Unmarshal([]byte(output), &tracelb)
+		if err != nil {
+			// fail and return here.
+			metrics.ErrorCount.WithLabelValues(
+				tableName, "pt", "corrupted json content").Inc()
+			metrics.TestCount.WithLabelValues(
+				tableName, "pt", "corrupted json content").Inc()
+			return schema.PTTest{}, err
+		}
+	}
+	for i, _ := range tracelb.Nodes {
+		oneNode := &tracelb.Nodes[i]
+		var links []schema.HopLink
+		if len(oneNode.Links) == 0 {
+			hops = append(hops, schema.ScamperHop{
+				Source: schema.HopIP{IP: oneNode.Addr, Hostname: oneNode.Name},
+				Linkc:  oneNode.Linkc,
+			})
+			continue
+		}
+		if len(oneNode.Links) != 1 {
+			continue
+		}
+		// Links is an array containing a single array of HopProbes.
+		for _, oneLink := range oneNode.Links[0] {
+			var probes []schema.HopProbe
+			var ttl int64
+			for _, oneProbe := range oneLink.Probes {
+				var rtt []float64
+				for _, oneReply := range oneProbe.Replies {
+					rtt = append(rtt, oneReply.Rtt)
+				}
+				probes = append(probes, schema.HopProbe{Flowid: int64(oneProbe.Flowid), Rtt: rtt})
+				ttl = int64(oneProbe.Ttl)
+			}
+			links = append(links, schema.HopLink{HopDstIP: oneLink.Addr, TTL: ttl, Probes: probes})
+		}
+		hops = append(hops, schema.ScamperHop{
+			Source: schema.HopIP{IP: oneNode.Addr, Hostname: oneNode.Name},
+			Linkc:  oneNode.Linkc,
+			Links:  links,
+		})
+
+	}
+
+	err = json.Unmarshal([]byte(jsonStrings[3]), &cycleStop)
+	if err != nil {
+		metrics.ErrorCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		metrics.TestCount.WithLabelValues(
+			tableName, "pt", "corrupted json content").Inc()
+		return schema.PTTest{}, err
+	}
+
+	parseInfo := schema.ParseInfo{
+		TaskFileName:  taskFilename,
+		ParseTime:     time.Now(),
+		ParserVersion: Version(),
+	}
+
+	return schema.PTTest{
+		UUID:           uuid,
+		TestTime:       logTime,
+		Parseinfo:      parseInfo,
+		StartTime:      int64(cycleStart.Start_time),
+		StopTime:       int64(cycleStop.Stop_time),
+		ScamperVersion: tracelb.Version,
+		Source:         schema.ServerInfo{IP: tracelb.Src},
+		Destination:    schema.ClientInfo{IP: tracelb.Dst},
+		ProbeSize:      int64(tracelb.Probe_size),
+		ProbeC:         int64(tracelb.Probec),
+		Hop:            hops,
+		ExpVersion:     version,
+		CachedResult:   resultFromCache,
+	}, nil
+}
+
+// -------------------------------------------------
+// The following are struct and funcs used by legacy parsing.
+// -------------------------------------------------
 
 // The data structure is used to store the parsed results temporarily before it is verified
 // not polluted and can be inserted into BQ tables
@@ -43,6 +292,7 @@ type cachedPTData struct {
 	Destination      schema.ClientInfo
 	LastValidHopLine string
 	MetroName        string
+	UUID             string
 }
 
 type PTParser struct {
@@ -182,21 +432,6 @@ func ParseFirstLine(oneLine string) (protocol string, destIP string, serverIP st
 	return protocol, destIP, serverIP, nil
 }
 
-// Return timestamp parsed from file name.
-func GetLogtime(filename PTFileName) (time.Time, error) {
-	date, _ := filename.GetDate()
-	// data is in format like "20170320T23:53:10Z"
-	revisedDate := date[0:4] + "-" + date[4:6] + "-" + date[6:18]
-
-	t, err := time.Parse(time.RFC3339, revisedDate)
-	if err != nil {
-		log.Println(err)
-		return time.Time{}, err
-	}
-
-	return t, nil
-}
-
 func (pt *PTParser) TaskError() error {
 	return nil
 }
@@ -213,6 +448,7 @@ func (pt *PTParser) InsertOneTest(oneTest cachedPTData) {
 	}
 
 	ptTest := schema.PTTest{
+		UUID:        oneTest.UUID,
 		TestTime:    oneTest.LogTime,
 		Parseinfo:   parseInfo,
 		Source:      oneTest.Source,
@@ -261,7 +497,7 @@ func (pt *PTParser) NumBufferedTests() int {
 
 // IsParsable returns the canonical test type and whether to parse data.
 func (pt *PTParser) IsParsable(testName string, data []byte) (string, bool) {
-	if strings.HasSuffix(testName, ".paris") {
+	if strings.HasSuffix(testName, ".paris") || strings.HasSuffix(testName, ".jsonl") {
 		return "paris", true
 	}
 	return "unknown", false
@@ -275,8 +511,29 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 	if meta["filename"] != nil {
 		testId = CreateTestId(meta["filename"].(string), filepath.Base(testName))
 		pt.taskFileName = meta["filename"].(string)
+	} else {
+		return errors.New("empty filename")
 	}
 
+	// Process the json output of Scamper binary.
+	if strings.Contains(testName, "jsonl") {
+		ptTest, err := ParseJSON(testName, rawContent, pt.TableName(), pt.taskFileName)
+		if err == nil {
+			err := pt.AddRow(&ptTest)
+			if err == etl.ErrBufferFull {
+				// Flush asynchronously, to improve throughput.
+				pt.Annotate(pt.TableName())
+				pt.PutAsync(pt.TakeRows())
+				pt.AddRow(&ptTest)
+			}
+		} else {
+			// Modify metrics
+			log.Printf("JSON parsing failed with error %v for %s", err, testName)
+		}
+		return nil
+	}
+
+	// Process the legacy Paris Traceroute txt output
 	cachedTest, err := Parse(meta, testName, testId, rawContent, pt.TableName())
 	if err != nil {
 		metrics.ErrorCount.WithLabelValues(
@@ -285,6 +542,11 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 			pt.TableName(), "pt", "corrupted content").Inc()
 		log.Printf("%v %s", err, testName)
 		return err
+	}
+
+	if len(cachedTest.Hops) == 0 {
+		// Empty test, no further action.
+		return nil
 	}
 
 	// Check all buffered PT tests whether Client_ip in connSpec appear in
@@ -542,8 +804,8 @@ func Parse(meta map[string]bigquery.Value, testName string, testId string, rawCo
 	// reach destIP at the last hop.
 	lastHop := destIP
 	if len(allNodes) == 0 {
-		// Empty test, stop here.
-		return cachedPTData{}, errors.New("Empty Test.")
+		// Empty test, stop here.  Not an error.
+		return cachedPTData{}, nil
 	}
 	if allNodes[len(allNodes)-1].ip != destIP && !strings.Contains(lastValidHopLine, destIP) {
 		// This is the case that we consider the test did not reach destIP at the last hop.

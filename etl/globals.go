@@ -3,6 +3,7 @@ package etl
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -35,10 +36,14 @@ const YYYYMMDD = `\d{4}[01]\d[0123]\d`
 // MlabDomain is the DNS domain for all mlab servers.
 const MlabDomain = `measurement-lab.org`
 
-const bucket = `gs://([^/]*)/`
-const expType = `(?:([a-z-]+)/)?([a-z0-9-]+)/` // experiment OR experiment/type.
+// BucketPattern is used to extract gsutil bucket name.
+const BucketPattern = `gs://([^/]*)/`
 
-const datePath = `(\d{4}/[01]\d/[0123]\d)/`
+// ExpTypePattern is used to extract the experiment or experiment/type part of the path.
+const ExpTypePattern = `(?:([a-z-]+)/)?([a-z0-9-]+)/` // experiment OR experiment/type.
+
+// DatePathPattern is used to extract the date directory part of the path, e.g. 2017/01/02
+const DatePathPattern = `(\d{4}/[01]\d/[0123]\d)/`
 
 const dateTime = `(\d{4}[01]\d[0123]\d)T(\d{6})(\.\d{0,6})?Z`
 
@@ -54,7 +59,7 @@ var (
 	basicTaskPattern = regexp.MustCompile(
 		`(?P<preamble>.*)` + dateTime + `(?P<postamble>.*)`)
 
-	startPattern = regexp.MustCompile(`^` + bucket + expType + datePath + `$`)
+	startPattern = regexp.MustCompile(`^` + BucketPattern + ExpTypePattern + DatePathPattern + `$`)
 	endPattern   = regexp.MustCompile(`^` +
 		type2 + // 1
 		mlabNSiteNN + // 2,3
@@ -94,7 +99,7 @@ func ValidateTestPath(path string) (*DataPath, error) {
 	}
 	preamble := startPattern.FindStringSubmatch(basic[1])
 	if preamble == nil {
-		return nil, errors.New("Invalid preable: " + basic[1])
+		return nil, errors.New("Invalid preamble: " + fmt.Sprint(basic))
 	}
 
 	post := endPattern.FindStringSubmatch(basic[5])
@@ -207,7 +212,8 @@ func (dt DataType) BQBufferSize() int {
 // TODO - use camelcase.
 const (
 	NDT             = DataType("ndt")
-	NDT_RESULT      = DataType("ndt_result")
+	NDT5            = DataType("ndt5")
+	NDT7            = DataType("ndt7")
 	NDT_OMIT_DELTAS = DataType("ndt_nodelta") // to support larger buffer size.
 	SS              = DataType("sidestream")
 	PT              = DataType("traceroute")
@@ -221,24 +227,26 @@ var (
 	// TODO - this should be loaded from a config.
 	dirToDataType = map[string]DataType{
 		"ndt":              NDT,
-		"ndt5":             NDT_RESULT,
-		"ndt7":             NDT_RESULT,
+		"ndt5":             NDT5,
+		"ndt7":             NDT7,
 		"sidestream":       SS,
 		"paris-traceroute": PT,
 		"switch":           SW,
 		"tcpinfo":          TCPINFO,
+		"traceroute":       PT,
 	}
 
 	// DataTypeToTable maps from data type to BigQuery table name.
 	// TODO - this should be loaded from a config.
 	dataTypeToTable = map[DataType]string{
-		NDT:        "ndt",
-		SS:         "sidestream",
-		PT:         "traceroute",
-		SW:         "switch",
-		TCPINFO:    "tcpinfo",
-		NDT_RESULT: "result",
-		INVALID:    "invalid",
+		NDT:     "ndt",
+		SS:      "sidestream",
+		PT:      "traceroute",
+		SW:      "switch",
+		TCPINFO: "tcpinfo",
+		NDT5:    "ndt5",
+		NDT7:    "ndt7",
+		INVALID: "invalid",
 	}
 
 	// Map from data type to number of buffer size for BQ insertion.
@@ -248,9 +256,10 @@ var (
 		NDT_OMIT_DELTAS: 50,
 		TCPINFO:         10,
 		SS:              500, // Average json size is 2.5K
-		PT:              5,
+		PT:              100,
 		SW:              100,
-		NDT_RESULT:      50,
+		NDT5:            50,
+		NDT7:            50,
 		INVALID:         0,
 	}
 	// There is also a mapping of data types to queue names in

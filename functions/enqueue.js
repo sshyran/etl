@@ -15,8 +15,12 @@ exports.queueForFile = function (filename) {
     experiment_to_task_queue = {
         "switch": "etl-disco-queue",
         "ndt": "etl-ndt-queue",
+        "ndt/traceroute": "etl-scamper-queue",
+        "host/traceroute": "etl-scamper-queue",
+        "bismark/traceroute": "etl-scamper-queue",
+        "neubot/traceroute": "etl-scamper-queue",
         "sidestream": "etl-sidestream-queue",
-        "paris-traceroute": "etl-paris-traceroute-queue"
+        "paris-traceroute": "etl-traceroute-queue"
     };
     // TODO - fix this.
     for (key in experiment_to_task_queue) {
