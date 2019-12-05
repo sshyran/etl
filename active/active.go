@@ -34,10 +34,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/m-lab/etl/cloud/gcs"
-
 	"github.com/GoogleCloudPlatform/google-cloud-go-testing/storage/stiface"
 
+	"github.com/m-lab/etl/cloud/gcs"
 	"github.com/m-lab/etl/worker"
 )
 
