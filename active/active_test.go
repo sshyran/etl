@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/go/cloudtest"
 
@@ -46,6 +48,17 @@ func (c *counter) processTask(tf *active.TaskFile) error {
 	return nil
 }
 
+type TokenSource struct {
+	sem *semaphore.Weighted
+}
+
+func (ts *TokenSource) Acquire(ctx context.Context) error {
+	return ts.sem.Acquire(ctx, 1)
+}
+func (ts *TokenSource) Release() {
+	ts.sem.Release(1)
+}
+
 func TestProcessAll(t *testing.T) {
 	fc := cloudtest.GCSClient{}
 	fc.AddTestBucket("foobar",
@@ -62,25 +75,25 @@ func TestProcessAll(t *testing.T) {
 	// First four attempts will fail.  This means that one of the 3 tasks will have two failures.
 	p := counter{t: t, fail: 4}
 	// Retry once per file.  This means one of the 3 tasks will never succeed.
-	fs, err := active.NewFileSource(fc, "fake", "gs://foobar/ndt/2019/01/01/", 1, p.processTask)
+	fs, err := active.NewFileSource(fc, "fake", "gs://foobar/ndt/2019/01/01/")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tokens := make(chan struct{}, 2)
-	wg, err := fs.ProcessAll(context.Background(), tokens)
+	disp := active.NewDispatcher(fs, p.processTask, 1)
+	tokens := TokenSource{semaphore.NewWeighted(1)}
+	wg, err := disp.ProcessAll(context.Background(), fs, &tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wg.Wait()
 
 	// At this point, we may be still draining the last tasks.
-	for len(tokens) > 0 {
-		time.Sleep(10 * time.Millisecond)
-	}
+	//	tokens.Acquire(context.Background())
+	//tokens.Release()
 
 	// One file should have failed twice.  Others should have failed once, then succeeded.
-	if len(fs.Errors()) != 1 {
-		t.Errorf("ProcessAll() had %d errors %v, %v", len(fs.Errors()), fs.Errors()[0], fs.Errors())
+	if len(disp.Errors()) != 1 {
+		t.Errorf("ProcessAll() had %d errors %v, %v", len(disp.Errors()), disp.Errors()[0], disp.Errors())
 	}
 
 	if p.success != 2 {
@@ -95,23 +108,26 @@ func TestNoFiles(t *testing.T) {
 			ObjAttrs: []*storage.ObjectAttrs{}})
 
 	p := counter{t: t} // All processing attempts will succeed.
-	fs, err := active.NewFileSource(fc, "fake", "gs://foobar/ndt/2019/01/01/", 1, p.processTask)
+	fs, err := active.NewFileSource(fc, "fake", "gs://foobar/ndt/2019/01/01/")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tokens := make(chan struct{}, 2)
-	wg, err := fs.ProcessAll(context.Background(), tokens)
+	disp := active.NewDispatcher(fs, p.processTask, 1)
+	tokens := TokenSource{semaphore.NewWeighted(2)}
+	wg, err := disp.ProcessAll(context.Background(), fs, &tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wg.Wait()
-	if len(fs.Errors()) > 0 {
-		t.Error("ProcessAll() had errors", fs.Errors())
-	}
-
 	// At this point, we may be still draining the last tasks.
-	for len(tokens) > 0 {
-		time.Sleep(10 * time.Millisecond)
+	// Hacky way to hopefully drain all the tasks.
+	/*	tokens.Acquire(context.Background())
+		tokens.Acquire(context.Background())
+		tokens.Release()
+		tokens.Release()*/
+
+	if len(disp.Errors()) > 0 {
+		t.Error("ProcessAll() had errors", disp.Errors())
 	}
 
 	// processTask should never be called, because there are no files.

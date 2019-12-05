@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/m-lab/etl/storage"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/GoogleCloudPlatform/google-cloud-go-testing/storage/stiface"
 	"github.com/m-lab/go/prometheusx"
@@ -217,7 +218,20 @@ func processOneFile(tf *active.TaskFile) error {
 	return err
 }
 
-var admission = make(chan bool, 1)
+// TokenSource is a simple token source for initial testing.
+type TokenSource struct {
+	sem *semaphore.Weighted
+}
+
+// Acquire acquires an admission token.
+func (ts *TokenSource) Acquire(ctx context.Context) error {
+	return ts.sem.Acquire(ctx, 1)
+}
+
+// Release releases an admission token.
+func (ts *TokenSource) Release() {
+	ts.sem.Release(1)
+}
 
 // This is a hack, and should not generally be used.
 // It has no admission control.
@@ -244,8 +258,7 @@ func handleActiveRequest(rwr http.ResponseWriter, rq *http.Request) {
 		return
 	}
 	stc := stiface.AdaptClient(sc)
-	// Allow two retries for failed tasks.
-	fs, err := active.NewFileSource(stc, "mlab-sandbox", path, 2, processOneFile)
+	fs, err := active.NewFileSource(stc, "mlab-sandbox", path)
 	if err != nil {
 		// TODO add metric
 		rwr.WriteHeader(http.StatusBadRequest)
@@ -253,8 +266,10 @@ func handleActiveRequest(rwr http.ResponseWriter, rq *http.Request) {
 		return
 	}
 	// Allow 60 concurrent tasks.
-	tokens := make(chan struct{}, 60)
-	wg, err := fs.ProcessAll(context.Background(), tokens)
+	// Allow two retries for failed tasks.
+	disp := active.NewDispatcher(fs, processOneFile, 2)
+	tokenSource := TokenSource{semaphore.NewWeighted(60)}
+	wg, err := disp.ProcessAll(context.Background(), fs, &tokenSource)
 	if err != nil {
 		rwr.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(rwr, fmt.Sprintf(`{"message": "Invalid path: %s %s"}`, path, err.Error()))
@@ -264,9 +279,9 @@ func handleActiveRequest(rwr http.ResponseWriter, rq *http.Request) {
 	go func() {
 		wg.Wait()
 
-		if len(fs.Errors()) != 0 {
+		if len(disp.Errors()) != 0 {
 			// TODO add metric
-			log.Println(path, "Had errors:", len(fs.Errors()))
+			log.Println(path, "Had errors:", len(disp.Errors()))
 		}
 	}()
 
