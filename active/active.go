@@ -258,6 +258,7 @@ func (disp *Dispatcher) startLauncher(ctx context.Context, tokens TokenSource) *
 			// Wait for a token
 			err := tokens.Acquire(ctx)
 			if err != nil {
+				log.Println(err)
 				break // Context expired.
 			}
 
@@ -268,8 +269,8 @@ func (disp *Dispatcher) startLauncher(ctx context.Context, tokens TokenSource) *
 			}
 			if tf == nil {
 				// return the token and quit
-				log.Println("No more tasks")
 				tokens.Release()
+				log.Println("No more tasks")
 				break
 			}
 
