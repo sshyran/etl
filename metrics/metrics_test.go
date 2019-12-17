@@ -106,5 +106,6 @@ func TestMetrics(t *testing.T) {
 	metrics.WorkerState.WithLabelValues("x", "x")
 	if !promtest.LintMetrics(nil) {
 		t.Log("There are lint errors in the prometheus metrics.")
+		t.Error()
 	}
 }
