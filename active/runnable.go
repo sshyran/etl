@@ -48,6 +48,9 @@ func RunAll(ctx context.Context, rSrc Source) error {
 				metrics.TestCount.WithLabelValues(rSrc.Label(), "", "ok").Inc()
 			default:
 				metrics.TestCount.WithLabelValues(rSrc.Label(), "", "error").Inc()
+				// This should be broken out into individual cases as we identify common errors.
+				// May want to improve on Info().
+				metrics.ErrorCount.WithLabelValues(run.Info(), "active", "other error")
 			}
 
 			return err
