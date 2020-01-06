@@ -173,7 +173,6 @@ deploy:
     && gcloud config set project mlab-sandbox
     && gcloud functions deploy createSandboxTaskOnFileNotification --stage-bucket=functions-mlab-sandbox --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=archive-mlab-sandbox
     && gcloud functions deploy createSandboxTaskOnEmbargoFileNotification --stage-bucket=functions-mlab-sandbox --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=embargo-mlab-sandbox
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -184,7 +183,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/activate_service_account.sh SERVICE_ACCOUNT_mlab_sandbox
     && gcloud app deploy --project=mlab-sandbox $TRAVIS_BUILD_DIR/appengine/queue.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -201,7 +199,6 @@ deploy:
     && $TRAVIS_BUILD_DIR/etl-schema/schema/sync_tables_with_schema.sh mlab-sandbox base_tables nodryrun
     && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-batch.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -212,7 +209,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/activate_service_account.sh SERVICE_ACCOUNT_mlab_sandbox
     && $TRAVIS_BUILD_DIR/etl-schema/schema/sync_tables_with_schema.sh mlab-sandbox base_tables nodryrun
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -230,7 +226,6 @@ deploy:
     $TRAVIS_BUILD_DIR/travis/activate_service_account.sh SERVICE_ACCOUNT_mlab_sandbox
     && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-ndt.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -243,7 +238,6 @@ deploy:
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-sidestream.yaml
     && cd $TRAVIS_BUILD_DIR/functions/embargo
     && gcloud functions deploy embargoOnFileNotificationSandbox --project=mlab-sandbox --stage-bucket=functions-mlab-sandbox --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=scraper-mlab-sandbox
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -255,7 +249,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker fast-sidestream.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -266,7 +259,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-traceroute.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -277,7 +269,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-scamper.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -288,7 +279,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox
     SERVICE_ACCOUNT_mlab_sandbox $TRAVIS_BUILD_DIR/cmd/etl_worker app-disco.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -301,7 +291,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/activate_service_account.sh SERVICE_ACCOUNT_mlab_sandbox
     && $TRAVIS_BUILD_DIR/travis/kubectl.sh mlab-sandbox data-processing $TRAVIS_BUILD_DIR/apply-cluster.sh
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -335,8 +324,8 @@ deploy:
     && gcloud app deploy --project=mlab-staging $TRAVIS_BUILD_DIR/appengine/queue.yaml
     && $TRAVIS_BUILD_DIR/etl-schema/schema/sync_tables_with_schema.sh mlab-staging batch nodryrun
     && $TRAVIS_BUILD_DIR/etl-schema/schema/sync_tables_with_schema.sh mlab-staging base_tables nodryrun
-    && 
-    travis/kubectl.sh mlab-staging data-processing ./apply-cluster.sh
+    &&
+    $TRAVIS_BUILD_DIR/travis/kubectl.sh mlab-staging data-processing ./apply-cluster.sh
     &&
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging
     SERVICE_ACCOUNT_mlab_staging $TRAVIS_BUILD_DIR/cmd/etl_worker app-ndt.yaml
@@ -357,7 +346,6 @@ deploy:
     && gcloud functions deploy createStagingTaskOnEmbargoFileNotification --project=mlab-staging --stage-bucket=functions-mlab-staging --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=embargo-mlab-staging
     && cd $TRAVIS_BUILD_DIR/functions/embargo
     && gcloud functions deploy embargoOnFileNotificationStaging --project=mlab-staging --stage-bucket=functions-mlab-staging --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=scraper-mlab-staging
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     branch: master
@@ -368,7 +356,6 @@ deploy:
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging
     SERVICE_ACCOUNT_mlab_staging $TRAVIS_BUILD_DIR/cmd/etl_worker fast-sidestream.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -390,7 +377,6 @@ deploy:
     && gcloud functions deploy createProdTaskOnEmbargoFileNotification --project=mlab-oti --stage-bucket=functions-mlab-oti --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=embargo-mlab-oti
     && cd $TRAVIS_BUILD_DIR/functions/embargo
     && gcloud functions deploy embargoOnFileNotificationOti --project=mlab-oti --stage-bucket=functions-mlab-oti --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=scraper-mlab-oti
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -416,7 +402,6 @@ deploy:
     SERVICE_ACCOUNT_mlab_oti $TRAVIS_BUILD_DIR/cmd/etl_worker app-sidestream.yaml
     && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti
     SERVICE_ACCOUNT_mlab_oti $TRAVIS_BUILD_DIR/cmd/etl_worker app-disco.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -430,7 +415,6 @@ deploy:
     && gcloud app deploy --project=mlab-oti $TRAVIS_BUILD_DIR/appengine/queue.yaml
     && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti
     SERVICE_ACCOUNT_mlab_oti $TRAVIS_BUILD_DIR/cmd/etl_worker app-batch.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
@@ -446,7 +430,6 @@ deploy:
     && gcloud app deploy --project=mlab-oti $TRAVIS_BUILD_DIR/appengine/queue.yaml
     && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti
     SERVICE_ACCOUNT_mlab_oti $TRAVIS_BUILD_DIR/cmd/etl_worker app-ndt.yaml
-  skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
