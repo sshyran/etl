@@ -10,7 +10,7 @@ RUN go install \
       -ldflags "-X github.com/m-lab/go/prometheusx.GitShortCommit=$(git log -1 --format=%h)" \
       ./...
 
-FROM frolvlad/alpine-glibc
+FROM ubuntu
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 
 COPY --from=builder /go/bin/etl_worker /bin/etl_worker
