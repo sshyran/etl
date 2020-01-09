@@ -59,7 +59,7 @@ func ProcessTask(fn string) (int, error) {
 	tr, err := storage.NewETLSource(client, fn)
 	if err != nil {
 		metrics.TaskCount.WithLabelValues(data.TableBase(), string(dataType), "ETLSourceError").Inc()
-		log.Printf("Error opening gcs file: %v", err)
+		log.Printf("Error opening gcs file: %s, %v", fn, err)
 		return http.StatusInternalServerError, err
 		// TODO - anything better we could do here?
 	}
@@ -87,7 +87,9 @@ func ProcessTask(fn string) (int, error) {
 	}
 	tsk := task.NewTask(fn, tr, p)
 
+	start := time.Now()
 	files, err := tsk.ProcessAllTests()
+	log.Printf("Processing %s file %s took %v\n", dataType, fn, time.Since(start))
 
 	// Count the files processed per-host-module per-weekday.
 	// TODO(soltesz): evaluate separating hosts and pods as separate metrics.
