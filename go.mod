@@ -8,6 +8,7 @@ require (
 	cloud.google.com/go/storage v1.5.0
 	github.com/araddon/dateparse v0.0.0-20190622164848-0fb0a474d195 // indirect
 	github.com/davecgh/go-spew v1.1.1
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-test/deep v1.0.4
 	github.com/google/go-jsonnet v0.14.0
 	github.com/google/uuid v1.1.1 // indirect
