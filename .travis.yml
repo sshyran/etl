@@ -178,7 +178,8 @@ deploy:
     && gcloud config set project mlab-sandbox
     && gcloud functions deploy createSandboxTaskOnFileNotification --stage-bucket=functions-mlab-sandbox --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=archive-mlab-sandbox
     && gcloud functions deploy createSandboxTaskOnEmbargoFileNotification --stage-bucket=functions-mlab-sandbox --trigger-event=providers/cloud.storage/eventTypes/object.change --trigger-resource=embargo-mlab-sandbox
-  skip_cleanup: true
+    && GCLOUD_PROJECT=mlab-sandbox go run cmd/update-schema/update.go  
+skip_cleanup: true
   on:
     repo: m-lab/etl
     all_branches: true
