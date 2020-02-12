@@ -231,10 +231,7 @@ var (
 		"ndt7":             NDT7,
 		"sidestream":       SS,
 		"paris-traceroute": PT,
-		"ndt/traceroute":   PT,
-		"host/traceroute":  PT,
-		"bismark/traceroute":  PT,
-		"neubot/traceroute":  PT,
+		"traceroute":       PT,
 		"switch":           SW,
 		"tcpinfo":          TCPINFO,
 	}
