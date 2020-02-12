@@ -231,9 +231,12 @@ var (
 		"ndt7":             NDT7,
 		"sidestream":       SS,
 		"paris-traceroute": PT,
+		"ndt/traceroute":   PT,
+		"host/traceroute":  PT,
+		"bismark/traceroute":  PT,
+		"neubot/traceroute":  PT,
 		"switch":           SW,
 		"tcpinfo":          TCPINFO,
-		"traceroute":       PT,
 	}
 
 	// DataTypeToTable maps from data type to BigQuery table name.
