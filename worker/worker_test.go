@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/m-lab/etl/metrics"
 	"github.com/m-lab/etl/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -36,24 +35,29 @@ func TestProcessTask(t *testing.T) {
 	if testing.Short() {
 		t.Log("Skipping integration test")
 	}
-	filename := "gs://archive-mlab-testing/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	//filename := "gs://archive-mlab-testing/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	//filename := "gs://archive-mlab-testing/ndt/traceroute/2019/11/02/20191102T020000.532538Z-traceroute-mlab3-yyz02-ndt.tgz"
+	//filename := "gs://archive-mlab-testing/paris-traceroute/2013/05/24/20130524T000000Z-mlab3-akl01-paris-traceroute-0000.tgz"
+	filename := "gs://archive-measurement-lab/paris-traceroute/2013/05/24/20130524T000000Z-mlab3-lju01-paris-traceroute-0000.tgz"
 	status, err := worker.ProcessTask(filename)
+
 	if err != nil {
 		t.Error(err)
 	}
 	if status != http.StatusOK {
 		t.Error("Expected", http.StatusOK, "Got:", status)
 	}
+	/*
+		// This section checks that prom metrics are updated appropriately.
+		c := make(chan prometheus.Metric, 10)
 
-	// This section checks that prom metrics are updated appropriately.
-	c := make(chan prometheus.Metric, 10)
+		metrics.FileCount.Collect(c)
+		checkCounter(t, c, 1)
 
-	metrics.FileCount.Collect(c)
-	checkCounter(t, c, 1)
+		metrics.TaskCount.Collect(c)
+		checkCounter(t, c, 1)
 
-	metrics.TaskCount.Collect(c)
-	checkCounter(t, c, 1)
-
-	metrics.TestCount.Collect(c)
-	checkCounter(t, c, 1)
+		metrics.TestCount.Collect(c)
+		checkCounter(t, c, 1)
+	*/
 }

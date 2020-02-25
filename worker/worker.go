@@ -71,13 +71,14 @@ func ProcessTask(fn string) (int, error) {
 	date, err := time.Parse(dateFormat, data.PackedDate)
 
 	ins, err := bq.NewInserter(dataType, date)
+
 	if err != nil {
 		metrics.TaskCount.WithLabelValues(data.TableBase(), string(dataType), "NewInserterError").Inc()
 		log.Printf("Error creating BQ Inserter:  %v", err)
 		return http.StatusInternalServerError, err
 		// TODO - anything better we could do here?
 	}
-
+	log.Println(ins.Project(), ins.FullTableName(), ins.TableBase(), ins.Dataset())
 	// Create parser, injecting Inserter
 	p := parser.NewParser(dataType, ins)
 	if p == nil {

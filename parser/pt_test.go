@@ -3,6 +3,7 @@ package parser_test
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -176,6 +177,31 @@ func TestParseLegacyFormatData(t *testing.T) {
 	}
 }
 
+func TestParseLegacyFormatData2(t *testing.T) {
+	rawData, err := ioutil.ReadFile("testdata/PT/20130524T00:04:44Z_ALL5729.paris")
+	if err != nil {
+		fmt.Println("cannot load test data")
+		return
+	}
+	cachedTest, err := parser.Parse(nil, "testdata/PT/20130524T00:04:44Z_ALL5729.paris", "", rawData, "pt-daily")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	log.Println(len(cachedTest.Hops))
+
+	/*
+		if len(cachedTest.Hops) != 9 {
+			t.Fatalf("Do not process hops correctly.")
+		}
+		if cachedTest.LogTime.Unix() != 1452559544 {
+			t.Fatalf("Do not process log time correctly.")
+		}
+		if cachedTest.LastValidHopLine != "ExpectedDestIP" {
+			t.Fatalf("Did not reach expected destination.")
+		}*/
+}
+
 func TestJSONParser(t *testing.T) {
 	rawData, err := ioutil.ReadFile("testdata/PT/20190927T070859Z_ndt-qtfh8_1565996043_0000000000003B64.jsonl")
 	if err != nil {
@@ -252,6 +278,66 @@ func TestPTInserter(t *testing.T) {
 	}
 	meta := map[string]bigquery.Value{"filename": "gs://fake-bucket/fake-archive.tgz"}
 	err = pt.ParseAndInsert(meta, "testdata/20170320T23:53:10Z-172.17.94.34-33456-74.125.224.100-33457.paris", rawData)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	if pt.NumRowsForTest() != 1 {
+		fmt.Println(pt.NumRowsForTest())
+		t.Fatalf("Number of rows in PT table is wrong.")
+	}
+	pt.AnnotateAndPutAsync("traceroute")
+	//pt.Inserter.Flush()
+	if len(ins.data) != 1 {
+		fmt.Println(len(ins.data))
+		t.Fatalf("Number of rows in inserter is wrong.")
+	}
+	if ins.data[0].(*schema.PTTest).Parseinfo.TaskFileName != "gs://fake-bucket/fake-archive.tgz" {
+		t.Fatalf("Task filename is wrong.")
+	}
+
+	t.Fatalf("XXX")
+}
+
+func TestPTInserter2(t *testing.T) {
+	ins := newInMemoryInserter()
+	pt := parser.NewPTParser(ins)
+	rawData, err := ioutil.ReadFile("testdata/PT/20130524T00:04:44Z_ALL5729.paris")
+	if err != nil {
+		t.Fatalf("cannot read testdata.")
+	}
+	meta := map[string]bigquery.Value{"filename": "gs://fake-bucket/fake-archive.tgz"}
+	err = pt.ParseAndInsert(meta, "testdata/PT/20130524T00:04:44Z_ALL5729.paris", rawData)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	pt.ProcessLastTests()
+	log.Println(pt.NumRowsForTest())
+
+	/*if pt.NumRowsForTest() != 1 {
+		fmt.Println(pt.NumRowsForTest())
+		t.Fatalf("Number of rows in PT table is wrong.")
+	}*/
+	pt.AnnotateAndPutAsync("traceroute")
+	//pt.Inserter.Flush()
+	if len(ins.data) != 1 {
+		fmt.Println(len(ins.data))
+		t.Fatalf("Number of rows in inserter is wrong.")
+	}
+	if ins.data[0].(*schema.PTTest).Parseinfo.TaskFileName != "gs://fake-bucket/fake-archive.tgz" {
+		t.Fatalf("Task filename is wrong.")
+	}
+}
+
+func TestJsonInserter(t *testing.T) {
+	ins := newInMemoryInserter()
+	pt := parser.NewPTParser(ins)
+	rawData, err := ioutil.ReadFile("testdata/PT/20191102T011014Z_ndt-v595x_1572645241_0000000000000626.jsonl")
+	if err != nil {
+		t.Fatalf("cannot read testdata.")
+	}
+	meta := map[string]bigquery.Value{"filename": "gs://fake-bucket/fake-archive.tgz"}
+	err = pt.ParseAndInsert(meta, "testdata/PT/20191102T011014Z_ndt-v595x_1572645241_0000000000000626.jsonl", rawData)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

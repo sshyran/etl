@@ -466,6 +466,7 @@ func (pt *PTParser) InsertOneTest(oneTest cachedPTData) {
 	}
 
 	err := pt.AddRow(&ptTest)
+	log.Println("inserted: ", oneTest.TestID)
 	if err == etl.ErrBufferFull {
 		// Flush asynchronously, to improve throughput.
 		pt.Annotate(pt.TableName())
@@ -479,11 +480,16 @@ func (pt *PTParser) ProcessLastTests() error {
 	for _, oneTest := range pt.previousTests {
 		pt.InsertOneTest(oneTest)
 	}
+	// Force async for the last few tests.
+	pt.Annotate(pt.TableName())
+	pt.PutAsync(pt.TakeRows())
+
 	pt.previousTests = []cachedPTData{}
 	return nil
 }
 
 func (pt *PTParser) Flush() error {
+	log.Println("Flush")
 	pt.ProcessLastTests()
 	return pt.Inserter.Flush()
 }
@@ -558,6 +564,8 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 		return nil
 	}
 
+	log.Println("here", testName)
+
 	// Check all buffered PT tests whether Client_ip in connSpec appear in
 	// the last hop of the buffered test.
 	// If it does appear, then the buffered test was polluted, and it will
@@ -577,6 +585,7 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 		}
 	}
 
+	log.Println("here2")
 	// If a test ends at the expected DestIP, it is not at risk of being
 	// polluted,so we don't have to wait to check against further tests.
 	// We can just go ahead and insert it to BigQuery table directly. This
@@ -586,6 +595,7 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 	// Also we don't care about test LogTime order, since there are other
 	// workers inserting other blocks of hops concurrently.
 	if cachedTest.LastValidHopLine == "ExpectedDestIP" {
+		log.Println("here3")
 		pt.InsertOneTest(cachedTest)
 		return nil
 	}
@@ -598,6 +608,7 @@ func (pt *PTParser) ParseAndInsert(meta map[string]bigquery.Value, testName stri
 	}
 	// Insert current test into pt.previousTests
 	pt.previousTests = append(pt.previousTests, cachedTest)
+	log.Println("here4")
 	return nil
 }
 
