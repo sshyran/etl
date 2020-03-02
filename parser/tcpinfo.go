@@ -162,9 +162,12 @@ func (p *TCPInfoParser) ParseAndInsert(fileMetadata map[string]bigquery.Value, t
 	}
 
 	if len(snaps) < 1 {
+		log.Println("no snapshots: ", fileMetadata)
 		// For now, we don't save rows with no snapshots.
 		metrics.TestCount.WithLabelValues(p.TableName(), "tcpinfo", "no-snaps").Inc()
 		return nil
+	} else {
+		log.Println(len(snaps), " snapshots")
 	}
 
 	row := schema.TCPRow{}

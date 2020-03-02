@@ -1,0 +1,1127 @@
+    [
+      {
+        "name": "UUID",
+        "type": "STRING"
+      },
+      {
+        "name": "TestTime",
+        "type": "TIMESTAMP"
+      },
+      {
+        "name": "ClientASN",
+        "type": "INTEGER"
+      },
+      {
+        "name": "ServerASN",
+        "type": "INTEGER"
+      },
+      {
+        "fields": [
+          {
+            "name": "TaskFileName",
+            "type": "STRING"
+          },
+          {
+            "name": "ParseTime",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "ParserVersion",
+            "type": "STRING"
+          },
+          {
+            "name": "Filename",
+            "type": "STRING"
+          }
+        ],
+        "name": "ParseInfo",
+        "type": "RECORD"
+      },
+      {
+        "fields": [
+          {
+            "name": "SPort",
+            "type": "INTEGER"
+          },
+          {
+            "name": "DPort",
+            "type": "INTEGER"
+          },
+          {
+            "name": "SrcIP",
+            "type": "STRING"
+          },
+          {
+            "name": "DstIP",
+            "type": "STRING"
+          },
+          {
+            "name": "Interface",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Cookie",
+            "type": "INTEGER"
+          }
+        ],
+        "name": "SockID",
+        "type": "RECORD"
+      },
+      {
+        "fields": [
+          {
+            "name": "IP",
+            "type": "STRING"
+          },
+          {
+            "name": "Port",
+            "type": "INTEGER"
+          },
+          {
+            "name": "IATA",
+            "type": "STRING"
+          },
+          {
+            "fields": [
+              {
+                "name": "continent_code",
+                "type": "STRING"
+              },
+              {
+                "name": "country_code",
+                "type": "STRING"
+              },
+              {
+                "name": "country_code3",
+                "type": "STRING"
+              },
+              {
+                "name": "country_name",
+                "type": "STRING"
+              },
+              {
+                "name": "region",
+                "type": "STRING"
+              },
+              {
+                "name": "metro_code",
+                "type": "INTEGER"
+              },
+              {
+                "name": "city",
+                "type": "STRING"
+              },
+              {
+                "name": "area_code",
+                "type": "INTEGER"
+              },
+              {
+                "name": "postal_code",
+                "type": "STRING"
+              },
+              {
+                "name": "latitude",
+                "type": "FLOAT"
+              },
+              {
+                "name": "longitude",
+                "type": "FLOAT"
+              },
+              {
+                "name": "radius",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "Geo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "IPPrefix",
+                "type": "STRING"
+              },
+              {
+                "fields": [
+                  {
+                    "mode": "REPEATED",
+                    "name": "ASNs",
+                    "type": "INTEGER"
+                  }
+                ],
+                "mode": "REPEATED",
+                "name": "Systems",
+                "type": "RECORD"
+              }
+            ],
+            "name": "Network",
+            "type": "RECORD"
+          }
+        ],
+        "name": "Server",
+        "type": "RECORD"
+      },
+      {
+        "fields": [
+          {
+            "name": "IP",
+            "type": "STRING"
+          },
+          {
+            "name": "Port",
+            "type": "INTEGER"
+          },
+          {
+            "fields": [
+              {
+                "name": "continent_code",
+                "type": "STRING"
+              },
+              {
+                "name": "country_code",
+                "type": "STRING"
+              },
+              {
+                "name": "country_code3",
+                "type": "STRING"
+              },
+              {
+                "name": "country_name",
+                "type": "STRING"
+              },
+              {
+                "name": "region",
+                "type": "STRING"
+              },
+              {
+                "name": "metro_code",
+                "type": "INTEGER"
+              },
+              {
+                "name": "city",
+                "type": "STRING"
+              },
+              {
+                "name": "area_code",
+                "type": "INTEGER"
+              },
+              {
+                "name": "postal_code",
+                "type": "STRING"
+              },
+              {
+                "name": "latitude",
+                "type": "FLOAT"
+              },
+              {
+                "name": "longitude",
+                "type": "FLOAT"
+              },
+              {
+                "name": "radius",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "Geo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "IPPrefix",
+                "type": "STRING"
+              },
+              {
+                "fields": [
+                  {
+                    "mode": "REPEATED",
+                    "name": "ASNs",
+                    "type": "INTEGER"
+                  }
+                ],
+                "mode": "REPEATED",
+                "name": "Systems",
+                "type": "RECORD"
+              }
+            ],
+            "name": "Network",
+            "type": "RECORD"
+          }
+        ],
+        "name": "Client",
+        "type": "RECORD"
+      },
+      {
+        "fields": [
+          {
+            "name": "Timestamp",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "Observed",
+            "type": "INTEGER"
+          },
+          {
+            "name": "NotFullyParsed",
+            "type": "INTEGER"
+          },
+          {
+            "fields": [
+              {
+                "name": "IDiagFamily",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagTimer",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagExpires",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagRqueue",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagWqueue",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagUID",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagInode",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "InetDiagMsg",
+            "type": "RECORD"
+          },
+          {
+            "name": "CongestionAlgorithm",
+            "type": "STRING"
+          },
+          {
+            "name": "TOS",
+            "type": "INTEGER"
+          },
+          {
+            "name": "TClass",
+            "type": "INTEGER"
+          },
+          {
+            "name": "ClassID",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Shutdown",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Protocol",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Mark",
+            "type": "INTEGER"
+          },
+          {
+            "fields": [
+              {
+                "name": "State",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CAState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Retransmits",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Probes",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Backoff",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Options",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WScale",
+                "type": "INTEGER"
+              },
+              {
+                "name": "AppLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTO",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ATO",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Unacked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Sacked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Lost",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Retrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Fackets",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastDataSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastAckSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastDataRecv",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastAckRecv",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PMTU",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvSsThresh",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTTVar",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndSsThresh",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndCwnd",
+                "type": "INTEGER"
+              },
+              {
+                "name": "AdvMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Reordering",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvSpace",
+                "type": "INTEGER"
+              },
+              {
+                "name": "TotalRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PacingRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MaxPacingRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesAcked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesReceived",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SegsOut",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SegsIn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "NotsentBytes",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DataSegsIn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DataSegsOut",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DeliveryRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BusyTime",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RWndLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndBufLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Delivered",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DeliveredCE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DSackDups",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ReordSeen",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "TCPInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Rmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Wmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Fmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Tmem",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "MemInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "RmemAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Rcvbuf",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WmemAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Sndbuf",
+                "type": "INTEGER"
+              },
+              {
+                "name": "FwdAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WmemQueued",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Optmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Backlog",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Drops",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "SocketMem",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Enabled",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTTCount",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "VegasInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Enabled",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CEState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Alpha",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ABEcn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ABTot",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "DCTCPInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "BW",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PacingGain",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CwndGain",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "BBRInfo",
+            "type": "RECORD"
+          }
+        ],
+        "name": "FinalSnapshot",
+        "type": "RECORD"
+      },
+      {
+        "fields": [
+          {
+            "name": "Timestamp",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "Observed",
+            "type": "INTEGER"
+          },
+          {
+            "name": "NotFullyParsed",
+            "type": "INTEGER"
+          },
+          {
+            "fields": [
+              {
+                "name": "IDiagFamily",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagTimer",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagExpires",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagRqueue",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagWqueue",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagUID",
+                "type": "INTEGER"
+              },
+              {
+                "name": "IDiagInode",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "InetDiagMsg",
+            "type": "RECORD"
+          },
+          {
+            "name": "CongestionAlgorithm",
+            "type": "STRING"
+          },
+          {
+            "name": "TOS",
+            "type": "INTEGER"
+          },
+          {
+            "name": "TClass",
+            "type": "INTEGER"
+          },
+          {
+            "name": "ClassID",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Shutdown",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Protocol",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Mark",
+            "type": "INTEGER"
+          },
+          {
+            "fields": [
+              {
+                "name": "State",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CAState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Retransmits",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Probes",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Backoff",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Options",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WScale",
+                "type": "INTEGER"
+              },
+              {
+                "name": "AppLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTO",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ATO",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Unacked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Sacked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Lost",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Retrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Fackets",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastDataSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastAckSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastDataRecv",
+                "type": "INTEGER"
+              },
+              {
+                "name": "LastAckRecv",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PMTU",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvSsThresh",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTTVar",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndSsThresh",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndCwnd",
+                "type": "INTEGER"
+              },
+              {
+                "name": "AdvMSS",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Reordering",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RcvSpace",
+                "type": "INTEGER"
+              },
+              {
+                "name": "TotalRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PacingRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MaxPacingRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesAcked",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesReceived",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SegsOut",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SegsIn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "NotsentBytes",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DataSegsIn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DataSegsOut",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DeliveryRate",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BusyTime",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RWndLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "SndBufLimited",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Delivered",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DeliveredCE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesSent",
+                "type": "INTEGER"
+              },
+              {
+                "name": "BytesRetrans",
+                "type": "INTEGER"
+              },
+              {
+                "name": "DSackDups",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ReordSeen",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "TCPInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Rmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Wmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Fmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Tmem",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "MemInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "RmemAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Rcvbuf",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WmemAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Sndbuf",
+                "type": "INTEGER"
+              },
+              {
+                "name": "FwdAlloc",
+                "type": "INTEGER"
+              },
+              {
+                "name": "WmemQueued",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Optmem",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Backlog",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Drops",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "SocketMem",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Enabled",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTTCount",
+                "type": "INTEGER"
+              },
+              {
+                "name": "RTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "VegasInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "Enabled",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CEState",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Alpha",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ABEcn",
+                "type": "INTEGER"
+              },
+              {
+                "name": "ABTot",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "DCTCPInfo",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
+                "name": "BW",
+                "type": "INTEGER"
+              },
+              {
+                "name": "MinRTT",
+                "type": "INTEGER"
+              },
+              {
+                "name": "PacingGain",
+                "type": "INTEGER"
+              },
+              {
+                "name": "CwndGain",
+                "type": "INTEGER"
+              }
+            ],
+            "name": "BBRInfo",
+            "type": "RECORD"
+          }
+        ],
+        "mode": "REPEATED",
+        "name": "Snapshots",
+        "type": "RECORD"
+      }
+    ]

@@ -409,6 +409,8 @@ func (in *sink) Commit(rows []interface{}, label string) (int, error) {
 	return in.flushSlice(rows, label, label)
 }
 
+func (in *sink) Close() error { return nil }
+
 // flushSlice flushes a slice of rows to BigQuery.
 // It returns the number of rows successfully committed.
 // It is NOT threadsafe.

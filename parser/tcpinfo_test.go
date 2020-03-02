@@ -12,11 +12,13 @@ import (
 	"testing"
 	"time"
 
-	v2 "github.com/m-lab/annotation-service/api/v2"
-
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
+
 	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
+
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/parser"
 	"github.com/m-lab/etl/schema"
@@ -102,6 +104,8 @@ func (in *inMemorySink) Committed() int {
 	return in.committed
 }
 
+func (in *inMemorySink) Close() error { return nil }
+
 // NOTE: This uses a fake annotator which returns no annotations.
 // TODO: This test seems to be flakey in travis - sometimes only 357 tests instead of 362
 func TestTCPParser(t *testing.T) {
@@ -138,8 +142,8 @@ func TestTCPParser(t *testing.T) {
 		t.Errorf("Expected %d, Got %d.", 362, ins.Committed())
 	}
 
-	if len(ins.data) < 1 {
-		t.Fatal("Should have at least one inserted row")
+	if len(ins.data) != 362 {
+		t.Fatal("Should have 362 inserted rows")
 	}
 
 	// Examine rows in some detail...
@@ -186,6 +190,7 @@ func TestTCPParser(t *testing.T) {
 	totalSnaps := int64(0)
 	for _, r := range ins.data {
 		row, _ := r.(*schema.TCPRow)
+		log.Println(len(row.Snapshots))
 		jsonBytes, _ := json.Marshal(r)
 		totalSnaps += int64(len(row.Snapshots))
 		if len(jsonBytes) > len(largestJson) {
@@ -194,11 +199,11 @@ func TestTCPParser(t *testing.T) {
 		}
 	}
 	marshalTime := time.Since(startMarshal)
+	t.Log("Total of", totalSnaps, "snapshots decoded and marshalled")
+	t.Log("Average", decodeTime.Nanoseconds()/totalSnaps, "nsec/snap to decode", marshalTime.Nanoseconds()/totalSnaps, "nsec/snap to marshal")
 
 	duration := largestRow.FinalSnapshot.Timestamp.Sub(largestRow.Snapshots[0].Timestamp)
 	t.Log("Largest json is", len(largestJson), "bytes in", len(largestRow.Snapshots), "snapshots, over", duration, "with", len(largestJson)/len(largestRow.Snapshots), "json bytes/snap")
-	t.Log("Total of", totalSnaps, "snapshots decoded and marshalled")
-	t.Log("Average", decodeTime.Nanoseconds()/totalSnaps, "nsec/snap to decode", marshalTime.Nanoseconds()/totalSnaps, "nsec/snap to marshal")
 
 	// Log one snapshot for debugging
 	snapJson, _ := json.Marshal(largestRow.FinalSnapshot)
@@ -269,6 +274,46 @@ func TestBQSaver(t *testing.T) {
 	id := sid.(map[string]bigquery.Value)
 	if id["SPort"].(uint16) != 3010 {
 		t.Error(id)
+	}
+}
+
+// This test writes 364 rows to a json file in GCS.
+// The rows can then be loaded into a BQ table, using the schema in testdata, like:
+// bq load --source_format=NEWLINE_DELIMITED_JSON \
+//    mlab-sandbox:gfr.small_tcpinfo gs://archive-mlab-testing/gfr/tcpinfo.json ./schema.json
+// Recommend commenting out snapshots in tcpinfo.go.
+func TestTaskToGCS(t *testing.T) {
+	os.Setenv("RELEASE_TAG", "foobar")
+	parser.InitParserVersionForTest()
+
+	c, err := storage.GetStorageClient(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rw, err := storage.NewRowWriter(context.Background(), stiface.AdaptClient(c), "archive-mlab-testing", "gfr/tcpinfo.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Inject fake inserter and annotator
+	p := parser.NewTCPInfoParser(rw, "test", "suffix", &fakeAnnotator{})
+
+	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
+	src, err := fileSource(filename)
+	if err != nil {
+		t.Fatal("Failed reading testdata from", filename)
+	}
+
+	task := task.NewTask(filename, src, p)
+
+	n, err := task.ProcessAllTests()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rw.Close()
+
+	if n != 364 {
+		t.Errorf("Expected ProcessAllTests to handle %d files, but it handled %d.\n", 364, n)
 	}
 }
 
