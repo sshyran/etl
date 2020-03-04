@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -124,9 +123,9 @@ func TestTCPParser(t *testing.T) {
 	p := parser.NewTCPInfoParser(ins, "test", "_suffix", &fakeAnnotator{})
 	task := task.NewTask(filename, src, p)
 
-	startDecode := time.Now()
+	//startDecode := time.Now()
 	n, err := task.ProcessAllTests()
-	decodeTime := time.Since(startDecode)
+	//decodeTime := time.Since(startDecode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +183,7 @@ func TestTCPParser(t *testing.T) {
 	// This section is just for understanding how big these objects typically are, and what kind of compression
 	// rates we see.  Not fundamental to the test.
 	// Find the row with the largest json representation, and estimate the Marshalling time per snapshot.
-	startMarshal := time.Now()
+	/*startMarshal := time.Now()
 	var largestRow *schema.TCPRow
 	var largestJson []byte
 	totalSnaps := int64(0)
@@ -215,7 +214,7 @@ func TestTCPParser(t *testing.T) {
 
 	if totalSnaps != 1588 {
 		t.Error("expected 1588 (thinned) snapshots, got", totalSnaps)
-	}
+	}*/
 }
 
 // This is a subset of TestTCPParser, but simpler, so might be useful.
