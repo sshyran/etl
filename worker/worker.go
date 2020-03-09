@@ -42,6 +42,7 @@ func ProcessTask(fn string) (int, error) {
 
 	// Move this into Validate function
 	dataType := data.GetDataType()
+	log.Println(dataType)
 	if dataType == etl.INVALID {
 		metrics.TaskCount.WithLabelValues(data.TableBase(), "worker", "BadRequest").Inc()
 		log.Printf("Invalid filename: %s\n", fn)
