@@ -300,8 +300,7 @@ func TestPTInserterLastTest(t *testing.T) {
 }
 
 func TestPTPollutionCheck(t *testing.T) {
-	ins := &inMemoryInserter{}
-	pt := parser.NewPTParser(ins)
+	pt := &parser.PTParser{}
 
 	tests := []struct {
 		fileName             string

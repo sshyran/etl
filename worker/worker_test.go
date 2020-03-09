@@ -36,7 +36,9 @@ func TestProcessTask(t *testing.T) {
 	if testing.Short() {
 		t.Log("Skipping integration test")
 	}
-	filename := "gs://archive-mlab-testing/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	//filename := "gs://archive-mlab-testing/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	//filename := "gs://archive-measurement-lab/paris-traceroute/2013/05/24/20130524T000000Z-mlab3-lju01-paris-traceroute-0000.tgz"
+	filename := "gs://archive-mlab-oti/host/traceroute/2019/11/15/20191115T034951.000655Z-traceroute-mlab1-tpe01-host.tgz"
 	status, err := worker.ProcessTask(filename)
 	if err != nil {
 		t.Error(err)
