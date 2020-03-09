@@ -67,6 +67,7 @@ func NewInserter(dt etl.DataType, partition time.Time) (etl.Inserter, error) {
 	bqProject := dt.BigqueryProject()
 	dataset := dt.Dataset()
 	table := dt.Table()
+	log.Println(bqProject + "######" + dataset + "######" + table)
 
 	return NewBQInserter(
 		etl.InserterParams{Project: bqProject, Dataset: dataset, Table: table, Suffix: suffix,
