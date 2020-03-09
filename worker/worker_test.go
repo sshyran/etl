@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/m-lab/etl/metrics"
+	//"github.com/m-lab/etl/metrics"
 	"github.com/m-lab/etl/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
