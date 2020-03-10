@@ -38,7 +38,8 @@ func TestProcessTask(t *testing.T) {
 	}
 	//filename := "gs://archive-mlab-testing/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
 	//filename := "gs://archive-measurement-lab/paris-traceroute/2013/05/24/20130524T000000Z-mlab3-lju01-paris-traceroute-0000.tgz"
-	filename := "gs://archive-mlab-testing/host/traceroute/2019/11/15/20191115T034951.000655Z-traceroute-mlab1-tpe01-host.tgz"
+	//filename := "gs://archive-mlab-testing/host/traceroute/2019/11/15/20191115T034951.000655Z-traceroute-mlab1-tpe01-host.tgz"
+	filename := "gs://archive-mlab-oti/neubot/traceroute/2019/12/19/20191219T020043.565437Z-traceroute-mlab2-fra04-neubot.tgz"
 	status, err := worker.ProcessTask(filename)
 	if err != nil {
 		t.Error(err)
