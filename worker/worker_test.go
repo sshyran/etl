@@ -14,11 +14,12 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/go/rtx"
-	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 
 	"github.com/m-lab/etl/fake"
 	"github.com/m-lab/etl/metrics"
