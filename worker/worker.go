@@ -9,7 +9,7 @@ import (
 	gcs "cloud.google.com/go/storage"
 
 	"github.com/m-lab/annotation-service/api/v2"
-	"github.com/m-lab/go/bqx"
+	"github.com/m-lab/go/cloud/bqx"
 
 	"github.com/m-lab/etl/bq"
 	"github.com/m-lab/etl/etl"

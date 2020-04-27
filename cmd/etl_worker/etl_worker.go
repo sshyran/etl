@@ -17,7 +17,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/m-lab/go/bqx"
+	"github.com/m-lab/go/cloud/bqx"
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 
