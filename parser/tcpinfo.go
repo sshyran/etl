@@ -149,9 +149,11 @@ func (p *TCPInfoParser) ParseAndInsert(fileMetadata map[string]bigquery.Value, t
 		if snapMetadata != nil {
 			testMetadata = *snapMetadata
 		}
-		if snap.Observed != 0 {
+		// Save no more than 3000 snapshots.
+		if len(snap) < 3000 && snap.Observed != 0 {
 			snaps = append(snaps, snap)
 		}
+		row.FinalSnapshot = snap
 	}
 
 	if err != io.EOF {
@@ -171,8 +173,8 @@ func (p *TCPInfoParser) ParseAndInsert(fileMetadata map[string]bigquery.Value, t
 	// TODO - restore full snapshots, or implement smarter filtering.
 	// row.Snapshots = thinSnaps(snaps)
 	row.Snapshots = snaps
-	row.FinalSnapshot = snaps[len(snaps)-1]
 	if row.FinalSnapshot.InetDiagMsg != nil {
+		// TODO Is this adequate?
 		row.SockID = row.FinalSnapshot.InetDiagMsg.ID.GetSockID()
 	}
 	row.CopySocketInfo()
