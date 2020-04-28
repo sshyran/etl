@@ -169,7 +169,8 @@ func (p *TCPInfoParser) ParseAndInsert(fileMetadata map[string]bigquery.Value, t
 
 	row := schema.TCPRow{}
 	// TODO - restore full snapshots, or implement smarter filtering.
-	row.Snapshots = thinSnaps(snaps)
+	// row.Snapshots = thinSnaps(snaps)
+	row.Snapshots = snaps
 	row.FinalSnapshot = snaps[len(snaps)-1]
 	if row.FinalSnapshot.InetDiagMsg != nil {
 		row.SockID = row.FinalSnapshot.InetDiagMsg.ID.GetSockID()
