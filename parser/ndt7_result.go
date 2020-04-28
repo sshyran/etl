@@ -72,7 +72,10 @@ func (dp *NDT7ResultParser) ParseAndInsert(meta map[string]bigquery.Value, testN
 	metrics.WorkerState.WithLabelValues(dp.TableName(), "ndt7_result").Inc()
 	defer metrics.WorkerState.WithLabelValues(dp.TableName(), "ndt7_result").Dec()
 
-	rdr := bytes.NewReader(test)
+	// This is probably a; terrible idea:
+	cp := make([]byte, len(test))
+	copy(cp, test)
+	rdr := bytes.NewReader(cp)
 	dec := json.NewDecoder(rdr)
 
 	for dec.More() {
