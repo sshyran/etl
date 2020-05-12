@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"cloud.google.com/go/bigquery"
 
 	"github.com/m-lab/go/cloud/bqx"
@@ -9,16 +11,28 @@ import (
 	"github.com/m-lab/etl/row"
 )
 
-// NDT5ResultRow defines the BQ schema for the data.NDT5Result produced by the
-// ndt-server for NDT client measurements.
+// NDT5ResultRow defines the BQ schema using 'Standard Columns' conventions for
+// the data.NDT5Result produced by the ndt-server for NDT5 client measurements.
 type NDT5ResultRow struct {
-	ParseInfo *ParseInfoV0
-	TestID    string          `json:"test_id,string" bigquery:"test_id"`
-	LogTime   int64           `json:"log_time,int64" bigquery:"log_time"`
-	Result    data.NDT5Result `json:"result" bigquery:"result"`
+	ID        string          `bigquery:"id"`
+	A         NDT5Summary     `bigquery:"a"`
+	ParseInfo ParseInfo       `bigquery:"parseInfo"`
+	TestTime  time.Time       `bigquery:"testTime"`
+	Flags     int64           `bigquery:"flags"`
+	Raw       data.NDT5Result `bigquery:"raw"`
 
 	// NOT part of struct schema. Included only to provide a fake annotator interface.
 	row.NullAnnotator `bigquery:"-"`
+}
+
+// NDT5Summary contains fields summarizing or derived from the raw data.
+type NDT5Summary struct {
+	UUID               string
+	TestTime           time.Time
+	CongestionControl  string
+	MeanThroughputMbps float64
+	MinRTT             float64
+	LossRate           float64
 }
 
 // Schema returns the BigQuery schema for NDT5ResultRow.

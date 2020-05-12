@@ -4,16 +4,26 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/go-test/deep"
 	"github.com/m-lab/etl/parser"
 	"github.com/m-lab/etl/schema"
+	"github.com/m-lab/go/rtx"
 )
+
+func mustParse(t string) time.Time {
+	v, err := time.Parse(time.RFC3339Nano, t)
+	rtx.Must(err, "Failed to parse: %s", t)
+	return v
+}
 
 func TestNDT5ResultParser_ParseAndInsert(t *testing.T) {
 	tests := []struct {
 		name           string
 		testName       string
+		want           schema.NDT5Summary
 		expectMetadata bool
 		wantErr        bool
 	}{
@@ -21,11 +31,27 @@ func TestNDT5ResultParser_ParseAndInsert(t *testing.T) {
 			name:           "success-with-metadata",
 			testName:       `ndt-5hkck_1566219987_000000000000017D.json`,
 			expectMetadata: true,
+			want: schema.NDT5Summary{
+				UUID:               "ndt-5hkck_1566219987_0000000000000183",
+				TestTime:           mustParse("2019-08-22T19:44:36.855433937Z"),
+				CongestionControl:  "cubic",
+				MeanThroughputMbps: 425.1844608,
+				MinRTT:             2,
+				LossRate:           0,
+			},
 		},
 		{
 			name:           "success-without-metadata",
 			testName:       `ndt-vscqp_1565987984_000000000001A1C2.json`,
 			expectMetadata: false,
+			want: schema.NDT5Summary{
+				UUID:               "ndt-vscqp_1565987984_000000000001A1C7",
+				TestTime:           mustParse("2019-08-22T01:52:44.556512708Z"),
+				CongestionControl:  "cubic",
+				MeanThroughputMbps: 0.4063232,
+				MinRTT:             216,
+				LossRate:           0,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -49,19 +75,22 @@ func TestNDT5ResultParser_ParseAndInsert(t *testing.T) {
 			}
 			n.Flush()
 			actualValues := ins.data[0].(*schema.NDT5ResultRow)
-			if actualValues.Result.Control == nil {
-				t.Fatal("Result.Control is nil, expected value")
+			if actualValues.Raw.Control == nil {
+				t.Fatal("Raw.Control is nil, expected value")
 			}
-			if actualValues.Result.Control.UUID != strings.TrimSuffix(tt.testName, ".json") {
-				t.Fatalf("Result.Control.UUID incorrect; got %q ; want %q", actualValues.Result.Control.UUID, strings.TrimSuffix(tt.testName, ".json"))
+			if actualValues.Raw.Control.UUID != strings.TrimSuffix(tt.testName, ".json") {
+				t.Fatalf("Raw.Control.UUID incorrect; got %q ; want %q", actualValues.Raw.Control.UUID, strings.TrimSuffix(tt.testName, ".json"))
 			}
-			if tt.expectMetadata && len(actualValues.Result.Control.ClientMetadata) != 1 {
-				t.Fatalf("Result.Control.ClientMetadata length != 1; got %d, want 1", len(actualValues.Result.Control.ClientMetadata))
+			if tt.expectMetadata && len(actualValues.Raw.Control.ClientMetadata) != 1 {
+				t.Fatalf("Raw.Control.ClientMetadata length != 1; got %d, want 1", len(actualValues.Raw.Control.ClientMetadata))
 			}
-			if tt.expectMetadata && (actualValues.Result.Control.ClientMetadata[0].Name != "client.os.name" || actualValues.Result.Control.ClientMetadata[0].Value != "NDTjs") {
-				t.Fatalf("Result.Control.ClientMetadata has wrong value; got %q=%q, want client.os.name=NDTjs",
-					actualValues.Result.Control.ClientMetadata[0].Name,
-					actualValues.Result.Control.ClientMetadata[0].Value)
+			if tt.expectMetadata && (actualValues.Raw.Control.ClientMetadata[0].Name != "client.os.name" || actualValues.Raw.Control.ClientMetadata[0].Value != "NDTjs") {
+				t.Fatalf("Raw.Control.ClientMetadata has wrong value; got %q=%q, want client.os.name=NDTjs",
+					actualValues.Raw.Control.ClientMetadata[0].Name,
+					actualValues.Raw.Control.ClientMetadata[0].Value)
+			}
+			if diff := deep.Equal(actualValues.A, tt.want); diff != nil {
+				t.Fatal(diff)
 			}
 		})
 	}

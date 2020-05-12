@@ -3,7 +3,6 @@ package parser
 // This file defines the Parser subtype that handles NDT5Result data.
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"regexp"
@@ -13,6 +12,8 @@ import (
 	"cloud.google.com/go/bigquery"
 
 	v2as "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/ndt-server/ndt5/c2s"
+	"github.com/m-lab/ndt-server/ndt5/s2c"
 
 	"github.com/m-lab/etl/annotation"
 	"github.com/m-lab/etl/etl"
@@ -82,39 +83,64 @@ func (dp *NDT5ResultParser) ParseAndInsert(meta map[string]bigquery.Value, testN
 	var re = regexp.MustCompile(`,"ClientMetadata":{[^}]+}`)
 	test = []byte(re.ReplaceAllString(string(test), ``))
 
-	rdr := bytes.NewReader(test)
-	dec := json.NewDecoder(rdr)
-
-	for dec.More() {
-		stats := schema.NDT5ResultRow{
-			TestID: testName,
-			ParseInfo: &schema.ParseInfoV0{
-				TaskFileName:  meta["filename"].(string),
-				ParseTime:     time.Now(),
-				ParserVersion: Version(),
-			},
-		}
-		err := dec.Decode(&stats.Result)
-		if err != nil {
-			log.Println(err)
-			metrics.TestCount.WithLabelValues(
-				dp.TableName(), "ndt5_result", "Decode").Inc()
-			return err
-		}
-
-		// Set the LogTime to the Result.StartTime
-		stats.LogTime = stats.Result.StartTime.Unix()
-
-		// Estimate the row size based on the input JSON size.
-		metrics.RowSizeHistogram.WithLabelValues(
-			dp.TableName()).Observe(float64(len(test)))
-
-		dp.Base.Put(&stats)
-		// Count successful inserts.
-		metrics.TestCount.WithLabelValues(dp.TableName(), "ndt5_result", "ok").Inc()
+	row := schema.NDT5ResultRow{
+		ParseInfo: schema.ParseInfo{
+			ArchiveURL:    meta["filename"].(string),
+			ParseTime:     time.Now(),
+			ParserVersion: Version(),
+			Filename:      testName,
+		},
 	}
 
+	// Parse the test.
+	err := json.Unmarshal(test, &row.Raw)
+	if err != nil {
+		log.Println(meta["filename"].(string), testName, err)
+		metrics.TestCount.WithLabelValues(dp.TableName(), "ndt5_result", "Unmarshal").Inc()
+		return err
+	}
+
+	// Set the LogTime to the Result.StartTime
+	row.TestTime = row.Raw.StartTime
+	if row.Raw.S2C != nil {
+		row.A = s2cSummary(row.Raw.S2C)
+	} else if row.Raw.C2S != nil {
+		row.A = c2sSummary(row.Raw.C2S)
+	}
+
+	// NOTE: this is the control channel ID, not the upload or download UUID.
+	row.ID = row.Raw.Control.UUID
+
+	// Estimate the row size based on the input JSON size.
+	metrics.RowSizeHistogram.WithLabelValues(dp.TableName()).Observe(float64(len(test)))
+
+	// Insert the row.
+	dp.Base.Put(&row)
+
+	// Count successful inserts.
+	metrics.TestCount.WithLabelValues(dp.TableName(), "ndt5_result", "ok").Inc()
 	return nil
+}
+
+func s2cSummary(down *s2c.ArchivalData) schema.NDT5Summary {
+	return schema.NDT5Summary{
+		UUID:               down.UUID,
+		TestTime:           down.StartTime,
+		CongestionControl:  "cubic",
+		MeanThroughputMbps: down.MeanThroughputMbps,
+		MinRTT:             float64(down.MinRTT.Microseconds()) / 1000.0,
+		LossRate:           0, // TODO: collect natively in ndt5 server.
+	}
+}
+func c2sSummary(up *c2s.ArchivalData) schema.NDT5Summary {
+	return schema.NDT5Summary{
+		UUID:               up.UUID,
+		TestTime:           up.StartTime,
+		CongestionControl:  "cubic", // TODO: what is the right value here?
+		MeanThroughputMbps: up.MeanThroughputMbps,
+		MinRTT:             0, // TODO: collect natively in ndt5 server.
+		LossRate:           0, // TODO: what is the correct measure for upload?
+	}
 }
 
 // NB: These functions are also required to complete the etl.Parser interface.
