@@ -224,7 +224,8 @@ func TestProcessGKETask(t *testing.T) {
 		Source:    NewSourceFactory(),
 	}
 
-	filename := "gs://test-bucket/ndt/ndt5/2019/12/01/20191201T020011.395772Z-ndt5-mlab1-bcn01-ndt.tgz"
+	//filename := "gs://test-bucket/ndt/ndt5/2019/12/01/20191201T020011.395772Z-ndt5-mlab1-bcn01-ndt.tgz"
+	filename := "gs://archive-mlab-oti/neubot/traceroute/2020/02/11/20200211T021855.544810Z-traceroute-mlab2-nuq04-neubot.tgz"
 	path, err := etl.ValidateTestPath(filename)
 	if err != nil {
 		t.Fatal(err, filename)
