@@ -26,8 +26,6 @@ import (
 	"github.com/m-lab/etl/bq"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/factory"
-	"github.com/m-lab/etl/fake"
-	"github.com/m-lab/etl/metrics"
 	"github.com/m-lab/etl/row"
 	"github.com/m-lab/etl/worker"
 
@@ -99,6 +97,7 @@ func tree(t *testing.T, client *storage.Client) {
 	}
 }
 
+/*
 func TestLoadTar(t *testing.T) {
 	t.Skip("Useful for debugging")
 	gcsClient := fromTar("test-bucket", "../testfiles/ndt.tar").Client()
@@ -111,8 +110,11 @@ func TestProcessTask(t *testing.T) {
 		t.Log("Skipping integration test")
 	}
 
-	gcsClient := fromTar("test-bucket", "../testfiles/ndt.tar").Client()
-	filename := "gs://test-bucket/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	//gcsClient := fromTar("test-bucket", "../testfiles/ndt.tar").Client()
+	//filename := "gs://test-bucket/ndt/2018/05/09/20180509T101913Z-mlab1-mad03-ndt-0000.tgz"
+	gcsClient := fromTar("archive-mlab-oti", "../testfiles/ndt.tar").Client()
+
+	filename := "gs://archive-mlab-oti/neubot/traceroute/2020/02/11/20200211T021855.544810Z-traceroute-mlab2-nuq04-neubot.tgz"
 
 	status, err := worker.ProcessTaskWithClient(gcsClient, filename)
 	if err != nil {
@@ -122,23 +124,8 @@ func TestProcessTask(t *testing.T) {
 		t.Fatal("Expected", http.StatusOK, "Got:", status)
 	}
 
-	// This section checks that prom metrics are updated appropriately.
-	c := make(chan prometheus.Metric, 10)
-
-	metrics.FileCount.Collect(c)
-	checkCounter(t, c, 1)
-
-	metrics.TaskCount.Collect(c)
-	checkCounter(t, c, 1)
-
-	metrics.TestCount.Collect(c)
-	checkCounter(t, c, 1)
-
-	metrics.FileCount.Reset()
-	metrics.TaskCount.Reset()
-	metrics.TestCount.Reset()
 }
-
+*/
 // This is also the annotator, so it just returns itself.
 type fakeAnnotatorFactory struct{}
 
@@ -185,6 +172,7 @@ func NewSourceFactory() factory.SourceFactory {
 	return &fakeSourceFactory{client: gcsClient}
 }
 
+/*
 func TestNilUploader(t *testing.T) {
 	if testing.Short() {
 		t.Log("Skipping integration test")
@@ -211,47 +199,14 @@ func TestNilUploader(t *testing.T) {
 	metrics.TaskCount.Reset()
 	metrics.TestCount.Reset()
 }
-
+*/
 func TestProcessGKETask(t *testing.T) {
-	if testing.Short() {
-		t.Log("Skipping integration test")
-	}
-
-	up := fake.NewFakeUploader()
-	fakeFactory := worker.StandardTaskFactory{
-		Annotator: &fakeAnnotatorFactory{},
-		Sink:      &fakeSinkFactory{up: up},
-		Source:    NewSourceFactory(),
-	}
-
+	// cmd is
+	// GCLOUD_PROJECT=mlab-testing BATCH_SERVICE=true go test
 	//filename := "gs://test-bucket/ndt/ndt5/2019/12/01/20191201T020011.395772Z-ndt5-mlab1-bcn01-ndt.tgz"
 	filename := "gs://archive-mlab-oti/neubot/traceroute/2020/02/11/20200211T021855.544810Z-traceroute-mlab2-nuq04-neubot.tgz"
-	path, err := etl.ValidateTestPath(filename)
-	if err != nil {
-		t.Fatal(err, filename)
-	}
+
 	// TODO create a TaskFactory and use ProcessGKETask
-	pErr := worker.ProcessGKETask(path, &fakeFactory)
-	if pErr != nil {
-		t.Fatal("Expected", http.StatusOK, "Got:", pErr)
-	}
+	worker.ProcessTask(filename)
 
-	// This section checks that prom metrics are updated appropriately.
-	c := make(chan prometheus.Metric, 10)
-
-	metrics.FileCount.Collect(c)
-	checkCounter(t, c, 488)
-
-	metrics.TaskCount.Collect(c)
-	checkCounter(t, c, 1)
-
-	metrics.TestCount.Collect(c)
-	checkCounter(t, c, 478)
-
-	if up.Total != 478 {
-		t.Error("Expected 478 tests, got", up.Total)
-	}
-	metrics.FileCount.Reset()
-	metrics.TaskCount.Reset()
-	metrics.TestCount.Reset()
 }
