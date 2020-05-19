@@ -204,8 +204,8 @@ func TestProcessGKETask(t *testing.T) {
 	// cmd is
 	// GCLOUD_PROJECT=mlab-testing BATCH_SERVICE=true go test
 	//filename := "gs://test-bucket/ndt/ndt5/2019/12/01/20191201T020011.395772Z-ndt5-mlab1-bcn01-ndt.tgz"
-	filename := "gs://archive-mlab-oti/neubot/traceroute/2020/02/11/20200211T021855.544810Z-traceroute-mlab2-nuq04-neubot.tgz"
-
+        //	filename := "gs://archive-mlab-oti/neubot/traceroute/2020/02/11/20200211T021855.544810Z-traceroute-mlab2-nuq04-neubot.tgz"
+	filename := "gs://archive-mlab-oti/ndt/traceroute/2020/02/12/20200212T064621.645252Z-traceroute-mlab1-yyz02-ndt.tgz"
 	// TODO create a TaskFactory and use ProcessGKETask
 	worker.ProcessTask(filename)
 
