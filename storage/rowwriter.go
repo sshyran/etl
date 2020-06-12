@@ -113,6 +113,7 @@ func (rw *RowWriter) Close() error {
 	// Take BOTH tokens, to ensure no other goroutines are still running.
 	<-rw.encoding
 	<-rw.writing
+	log.Println("Closing", rw.bucket, rw.path)
 	return rw.w.Close()
 }
 
