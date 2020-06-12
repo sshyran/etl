@@ -15,13 +15,13 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 
 	"github.com/m-lab/etl/active"
-	"github.com/m-lab/etl/bq"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/factory"
 	"github.com/m-lab/etl/metrics"
@@ -255,9 +255,11 @@ func toRunnable(obj *gcs.ObjectAttrs) active.Runnable {
 	if err != nil {
 		return nil // TODO add an error?
 	}
+	// HACK for now
+	outputBucket := "json_" + os.Getenv("GCLOUD_PROJECT")
 	taskFactory := worker.StandardTaskFactory{
 		Annotator: factory.DefaultAnnotatorFactory(),
-		Sink:      bq.NewSinkFactory(),
+		Sink:      storage.NewSinkFactory(stiface.AdaptClient(c), outputBucket),
 		Source:    storage.GCSSourceFactory(c),
 	}
 	return &runnable{&taskFactory, *obj}

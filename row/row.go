@@ -109,6 +109,7 @@ type HasStats interface {
 // Implementations should be threadsafe.
 type Sink interface {
 	Commit(rows []interface{}, label string) (int, error)
+	Close() error // For sinks that require closing.
 }
 
 // Buffer provides all basic functionality generally needed for buffering, annotating, and inserting
@@ -328,6 +329,7 @@ func (pb *Base) commit(rows []interface{}) error {
 		pb.stats.Done(done, nil)
 	}
 	if err != nil {
+		log.Println(pb.label, err)
 		pb.stats.Done(len(rows)-done, err)
 	}
 	return err
