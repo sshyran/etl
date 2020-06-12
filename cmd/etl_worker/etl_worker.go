@@ -256,7 +256,7 @@ func toRunnable(obj *gcs.ObjectAttrs) active.Runnable {
 		return nil // TODO add an error?
 	}
 	// HACK for now
-	outputBucket := "json_" + os.Getenv("GCLOUD_PROJECT")
+	outputBucket := "json-" + os.Getenv("GCLOUD_PROJECT")
 	taskFactory := worker.StandardTaskFactory{
 		Annotator: factory.DefaultAnnotatorFactory(),
 		Sink:      storage.NewSinkFactory(stiface.AdaptClient(c), outputBucket),

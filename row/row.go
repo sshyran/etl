@@ -230,6 +230,8 @@ func (ann *annotator) annotateServers(rows []interface{}, label string) error {
 	return err
 }
 
+var logEmptyAnn = logx.NewLogEvery(nil, 60*time.Second)
+
 // label is used to label metrics and errors in GetAnnotations
 func (ann *annotator) annotateClients(rows []interface{}, label string) error {
 	ipSlice := make([]string, 0, 2*len(rows)) // This may be inadequate, but its a reasonable start.
@@ -254,7 +256,7 @@ func (ann *annotator) annotateClients(rows []interface{}, label string) error {
 	}
 	annMap := response.Annotations
 	if annMap == nil {
-		log.Println("empty client annotation response")
+		logEmptyAnn.Println("empty client annotation response")
 		metrics.AnnotationErrorCount.With(prometheus.
 			Labels{"source": "Client IP: empty response"}).Inc()
 		return ErrAnnotationError
