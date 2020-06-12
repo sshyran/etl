@@ -313,9 +313,14 @@ func (pb *Base) TaskError() error {
 	return nil
 }
 
+var logAnnError = logx.NewLogEvery(nil, 60*time.Second)
+
 func (pb *Base) commit(rows []interface{}) error {
-	// TODO - care about error?
-	_ = pb.ann.Annotate(rows, pb.label)
+	err := pb.ann.Annotate(rows, pb.label)
+	if err != nil {
+		logAnnError.Println("annotation: ", err)
+	}
+
 	// TODO do we need these to be done in order.
 	// This is synchronous, blocking, and thread safe.
 	done, err := pb.sink.Commit(rows, pb.label)
