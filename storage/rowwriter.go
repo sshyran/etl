@@ -114,7 +114,13 @@ func (rw *RowWriter) Close() error {
 	<-rw.encoding
 	<-rw.writing
 	log.Println("Closing", rw.bucket, rw.path)
-	return rw.w.Close()
+	err := rw.w.Close()
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println(rw.w.Attrs())
+	}
+	return err
 }
 
 // SinkFactory implements factory.SinkFactory.
