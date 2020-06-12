@@ -104,6 +104,19 @@ type HasStats interface {
 	GetStats() Stats
 }
 
+// Closer describes objects that have Close()
+type Closer interface {
+	Close() error
+}
+
+// NullCloser implements Closer
+type NullCloser struct{}
+
+// Close implements Closer.Close()
+func (nc NullCloser) Close() error {
+	return nil
+}
+
 // Sink defines the interface for committing rows.
 // Returns the number of rows successfully committed, and error.
 // Implementations should be threadsafe.
