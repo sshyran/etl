@@ -356,7 +356,7 @@ func (pb *Base) Put(row Annotatable) {
 		// TODO consider making this asynchronous.
 		err := pb.commit(rows)
 		if err != nil {
-			log.Println(err)
+			log.Println(pb.label, err)
 		}
 	}
 }
