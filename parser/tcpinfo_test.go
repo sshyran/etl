@@ -292,7 +292,7 @@ func TestTaskToGCS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rw, err := storage.NewRowWriter(context.Background(), stiface.AdaptClient(c), "archive-mlab-testing", "gfr/tcpinfo.json")
+	rw, err := storage.NewRowWriter(context.Background(), stiface.AdaptClient(c), "archive-mlab-testing", "gfr/tcpinfo2.json")
 	if err != nil {
 		t.Fatal(err)
 	}

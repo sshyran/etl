@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -132,8 +131,8 @@ type SinkFactory struct {
 // Get mplements factory.SinkFactory
 // TODO - should inject context?
 func (sf *SinkFactory) Get(ctx context.Context, path etl.DataPath) (row.Sink, etl.ProcessingError) {
-	gcsPath := fmt.Sprintf("%s/%s/%s", path.DataType, path.ExpDir, path.DatePath)
-	s, err := NewRowWriter(context.Background(), sf.client, sf.outputBucket, gcsPath)
+	//gcsPath := fmt.Sprintf("%s/%s/%s/%s", path.DataType, path.ExpDir, path.DatePath, path.)
+	s, err := NewRowWriter(context.Background(), sf.client, sf.outputBucket, path.PathAndFilename()+".json")
 	if err != nil {
 		return nil, factory.NewError(path.DataType, "SinkFactory",
 			http.StatusInternalServerError, err)
