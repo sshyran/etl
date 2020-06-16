@@ -15,7 +15,6 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
-	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/m-lab/go/prometheusx"
@@ -259,7 +258,7 @@ func toRunnable(obj *gcs.ObjectAttrs) active.Runnable {
 	outputBucket := "json-" + os.Getenv("GCLOUD_PROJECT")
 	taskFactory := worker.StandardTaskFactory{
 		Annotator: factory.DefaultAnnotatorFactory(),
-		Sink:      storage.NewSinkFactory(stiface.AdaptClient(c), outputBucket),
+		Sink:      storage.NewSinkFactory(c, outputBucket),
 		Source:    storage.GCSSourceFactory(c),
 	}
 	return &runnable{&taskFactory, *obj}

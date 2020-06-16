@@ -24,6 +24,7 @@ import (
 	gcs "cloud.google.com/go/storage"
 	"google.golang.org/api/option"
 
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/m-lab/etl/etl"
 	"github.com/m-lab/etl/factory"
 	"github.com/m-lab/etl/metrics"
@@ -225,7 +226,7 @@ var errNoClient = errors.New("client should be non-null")
 //
 // uri should be of form gs://bucket/filename.tar or gs://bucket/filename.tgz
 // FYI Using a persistent client saves about 80 msec, and 220 allocs, totalling 70kB.
-func NewTestSource(client *gcs.Client, dp etl.DataPath, label string) (etl.TestSource, error) {
+func NewTestSource(client stiface.Client, dp etl.DataPath, label string) (etl.TestSource, error) {
 	if client == nil {
 		return nil, errNoClient
 	}
@@ -293,7 +294,7 @@ func NewTestSource(client *gcs.Client, dp etl.DataPath, label string) (etl.TestS
 
 // GetStorageClient provides a storage reader client.
 // This contacts the backend server, so should be used infrequently.
-func GetStorageClient(writeAccess bool) (*gcs.Client, error) {
+func GetStorageClient(writeAccess bool) (stiface.Client, error) {
 	var scope string
 	if writeAccess {
 		scope = gcs.ScopeReadWrite
@@ -307,11 +308,11 @@ func GetStorageClient(writeAccess bool) (*gcs.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+	return stiface.AdaptClient(client), nil
 }
 
 type gcsSourceFactory struct {
-	client *gcs.Client
+	client stiface.Client
 }
 
 // Get implements SourceFactory.Get
@@ -337,7 +338,7 @@ func (sf *gcsSourceFactory) Get(ctx context.Context, dp etl.DataPath) (etl.TestS
 }
 
 // GCSSourceFactory returns the default SourceFactory
-func GCSSourceFactory(c *gcs.Client) factory.SourceFactory {
+func GCSSourceFactory(c stiface.Client) factory.SourceFactory {
 	return &gcsSourceFactory{c}
 }
 
@@ -346,7 +347,7 @@ func GCSSourceFactory(c *gcs.Client) factory.SourceFactory {
 //---------------------------------------------------------------------------------
 
 // Caller is responsible for closing response body.
-func getReader(client *gcs.Client, bucket string, fn string, timeout time.Duration) (io.ReadCloser, func(), error) {
+func getReader(client stiface.Client, bucket string, fn string, timeout time.Duration) (io.ReadCloser, func(), error) {
 	// Lightweight - only setting up the local object.
 	b := client.Bucket(bucket)
 	obj := b.Object(fn)
