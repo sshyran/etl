@@ -69,7 +69,7 @@ func (src *GCSSource) nextHeader(trial int) (*tar.Header, bool, error) {
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, "next", strconv.Itoa(trial), "other").Inc()
 		}
-		log.Printf("nextHeader: %v\n", err)
+		log.Printf("ERROR nextHeader: %v\n", err)
 	}
 	return h, true, err
 }
@@ -91,7 +91,7 @@ func (src *GCSSource) nextData(h *tar.Header, trial int) ([]byte, bool, error) {
 			}
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, "open zip", strconv.Itoa(trial), "zipReaderError").Inc()
-			log.Printf("zipReaderError(%d): %v in file %s\n", trial, err, h.Name)
+			log.Printf("Error zipReader(%d): %v in file %s\n", trial, err, h.Name)
 			return nil, true, err
 		}
 		defer zipReader.Close()
@@ -111,10 +111,12 @@ func (src *GCSSource) nextData(h *tar.Header, trial int) ([]byte, bool, error) {
 		} else {
 			// We haven't seen any of these so far (as of May 9, 2017)
 			// We ARE seeing these for ndt7/read-zip, June 2020.  They are consistent for each reprocessing.
+			// They occur when there is a truncated gz file within an archive.
+			// HOWEVER, there are also many empty gz files, that we should also warn about.
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, phase, strconv.Itoa(trial), "other error").Inc()
 		}
-		log.Printf("ERROR nextData:%d [%s] %s %s (%d bytes)\n", trial, err, h.Name, src.FilePath, src.Size)
+		log.Printf("ERROR nextData:%d [%s] %s (%d bytes) from %s\n", trial, err, h.Name, h.Size, src.FilePath)
 		return nil, true, err
 	}
 

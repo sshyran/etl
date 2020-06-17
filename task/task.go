@@ -133,6 +133,11 @@ OUTER:
 			// If verbose, log the filename that is skipped.
 			continue
 		}
+		if len(data) == 0 {
+			// Parser should also, likely, insert an empty row with just parse info and id
+			metrics.WarningCount.WithLabelValues(
+				tt.TableName(), tt.Type(), "empty test file").Inc()
+		}
 		kind, parsable := tt.Parser.IsParsable(testname, data)
 		if !parsable {
 			metrics.FileSizeHistogram.WithLabelValues(
