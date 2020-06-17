@@ -98,7 +98,7 @@ OUTER:
 			case err == io.EOF:
 				break OUTER
 			case err == storage.ErrOversizeFile:
-				log.Printf("filename:%s testname:%s files:%d, duration:%v err:%v",
+				log.Printf("ERROR filename:%s testname:%s files:%d, duration:%v err:%v",
 					tt.meta["filename"], testname, files,
 					time.Since(tt.meta["parse_time"].(time.Time)), err)
 				metrics.TestCount.WithLabelValues(
@@ -115,7 +115,7 @@ OUTER:
 				// err:stream error: stream ID 801; INTERNAL_ERROR
 				// Because of the break, this error is passed up, and counted at
 				// the Task level.
-				log.Printf("filename:%s testname:%s files:%d, duration:%v err:%v",
+				log.Printf("ERROR filename:%s testname:%s files:%d, duration:%v err:%v",
 					tt.meta["filename"], testname, files,
 					time.Since(tt.meta["parse_time"].(time.Time)), err)
 
@@ -135,6 +135,7 @@ OUTER:
 		}
 		if len(data) == 0 {
 			// Parser should also, likely, insert an empty row with just parse info and id
+			log.Printf("WARNING empty test %s:%s %s\n", tt.TableName(), tt.Type(), tt.Detail())
 			metrics.WarningCount.WithLabelValues(
 				tt.TableName(), tt.Type(), "empty test file").Inc()
 		}
@@ -153,7 +154,7 @@ OUTER:
 		if err != nil {
 			metrics.TaskCount.WithLabelValues(
 				tt.Type(), "ParseAndInsertError").Inc()
-			log.Printf("%v", err)
+			log.Printf("ERROR %v", err)
 			// TODO(dev) Handle this error properly!
 			continue
 		}
