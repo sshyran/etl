@@ -131,6 +131,8 @@ func (g *GardenerAPI) JobFileSource(ctx context.Context, job tracker.Job,
 
 	filter, err := regexp.Compile(job.Filter)
 	if err != nil {
+		JobFailures.WithLabelValues(
+			job.Experiment+"/"+job.Datatype, job.Date.Format("2006"), "filter compile").Inc()
 		return nil, err
 	}
 	lister := FileListerFunc(g.gcs, job.Path(), filter)
