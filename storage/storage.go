@@ -42,6 +42,7 @@ type TarReader interface {
 // GCSSource wraps a gsutil tar file containing tests.
 type GCSSource struct {
 	FilePath      string
+	Size          int64
 	TarReader                   // TarReader interface provided by an embedded struct.
 	io.Closer                   // Closer interface to be provided by an embedded struct.
 	RetryBaseTime time.Duration // The base time for backoff and retry.
@@ -57,6 +58,7 @@ func (src *GCSSource) nextHeader(trial int) (*tar.Header, bool, error) {
 		if err == io.EOF {
 			return nil, false, err
 		} else if strings.Contains(err.Error(), "unexpected EOF") {
+			// We are seeing these metrics, but logs at 113
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, "next", strconv.Itoa(trial), "unexpected EOF").Inc()
 			// TODO: These are likely unrecoverable, so we should
@@ -107,11 +109,12 @@ func (src *GCSSource) nextData(h *tar.Header, trial int) ([]byte, bool, error) {
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, phase, strconv.Itoa(trial), "stream error").Inc()
 		} else {
-			// We haven't seen any of these so far (as of May 9)
+			// We haven't seen any of these so far (as of May 9, 2017)
+			// We ARE seeing these for ndt7/read-zip, June 2020.  They are consistent for each reprocessing.
 			metrics.GCSRetryCount.WithLabelValues(
 				src.TableBase, phase, strconv.Itoa(trial), "other error").Inc()
 		}
-		log.Printf("nextData(%d): %v\n", trial, err)
+		log.Printf("ERROR nextData:%d [%s] %s %s (%d bytes)\n", trial, err, h.Name, src.FilePath, src.Size)
 		return nil, true, err
 	}
 
@@ -252,11 +255,12 @@ func NewTestSource(client stiface.Client, dp etl.DataPath, label string) (etl.Te
 		return nil, errors.New("not tar or tgz: " + dp.URI)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	// TODO(prod) Evaluate whether this is long enough.
 	// TODO - appengine requests time out after 60 minutes, so more than that doesn't help.
 	// SS processing sometimes times out with 1 hour.
 	// Is there a limit on http requests from task queue, or into flex instance?
-	rdr, cancel, err := getReader(client, bucket, fn, 300*time.Minute)
+	rdr, size, err := getReader(ctx, client, bucket, fn, 300*time.Minute)
 	if err != nil {
 		cancel()
 		log.Println(err)
@@ -283,6 +287,7 @@ func NewTestSource(client stiface.Client, dp etl.DataPath, label string) (etl.Te
 	baseTimeout := 16 * time.Millisecond
 	gcs := &GCSSource{
 		FilePath:      dp.URI,
+		Size:          size,
 		TarReader:     tarReader,
 		Closer:        closer,
 		RetryBaseTime: baseTimeout,
@@ -347,11 +352,15 @@ func GCSSourceFactory(c stiface.Client) factory.SourceFactory {
 //---------------------------------------------------------------------------------
 
 // Caller is responsible for closing response body.
-func getReader(client stiface.Client, bucket string, fn string, timeout time.Duration) (io.ReadCloser, func(), error) {
+// TODO - pass in the ctx.
+func getReader(ctx context.Context, client stiface.Client, bucket string, fn string, timeout time.Duration) (io.ReadCloser, int64, error) {
 	// Lightweight - only setting up the local object.
 	b := client.Bucket(bucket)
 	obj := b.Object(fn)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	rdr, err := obj.NewReader(ctx)
-	return rdr, cancel, err
+	if err != nil {
+		return rdr, 0, err
+	}
+	attr, err := obj.Attrs(ctx)
+	return rdr, attr.Size, err
 }

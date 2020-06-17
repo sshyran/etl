@@ -33,13 +33,15 @@ func TestGetReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rdr, cancel, err := getReader(client, testBucket, "test.tar", 60*time.Second)
-
+	ctx := context.Background()
+	rdr, size, err := getReader(ctx, client, testBucket, "test.tar", 60*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rdr.Close()
-	cancel()
+	if size != 10240 {
+		t.Error("Wrong size, expected 10240: ", size)
+	}
 }
 
 func TestNewTarReader(t *testing.T) {
