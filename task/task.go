@@ -38,20 +38,40 @@ type Task struct {
 	etl.TestSource // Source from which to read tests.
 	etl.Parser     // Parser to parse the tests.
 
+	closer      io.Closer                 // Closer for the output, if any.
 	meta        map[string]bigquery.Value // Metadata about this task.
 	maxFileSize int64                     // Max file size to avoid OOM.
 }
 
 // NewTask constructs a task, injecting the source and the parser.
-func NewTask(filename string, src etl.TestSource, prsr etl.Parser) *Task {
+func NewTask(filename string, src etl.TestSource, prsr etl.Parser, closer io.Closer) *Task {
 	// TODO - should the meta data be a nested type?
 	meta := make(map[string]bigquery.Value, 3)
 	meta["filename"] = filename
 	meta["parse_time"] = time.Now()
 	meta["attempt"] = 1
 	meta["date"] = src.Date()
-	t := Task{src, prsr, meta, DefaultMaxFileSize}
+	t := Task{
+		TestSource:  src,
+		Parser:      prsr,
+		closer:      closer,
+		meta:        meta,
+		maxFileSize: DefaultMaxFileSize,
+	}
 	return &t
+}
+
+// Close closes the source and sink.
+func (tt *Task) Close() error {
+	var outErr error
+	if tt.closer != nil {
+		outErr = tt.closer.Close()
+	}
+	tErr := tt.TestSource.Close()
+	if outErr != nil {
+		return outErr
+	}
+	return tErr
 }
 
 // SetMaxFileSize overrides the default maxFileSize.
@@ -159,5 +179,5 @@ OUTER:
 	if tt.Parser.TaskError() != nil {
 		return files, tt.Parser.TaskError()
 	}
-	return files, nil
+	return files, flushErr
 }

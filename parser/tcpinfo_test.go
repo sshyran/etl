@@ -120,9 +120,9 @@ func TestTCPParser(t *testing.T) {
 	}
 
 	// Inject fake inserter and annotator
-	ins := newInMemorySink()
-	p := parser.NewTCPInfoParser(ins, "test", "_suffix", &fakeAnnotator{})
-	task := task.NewTask(filename, src, p)
+	sink := newInMemorySink()
+	p := parser.NewTCPInfoParser(sink, "test", "_suffix", &fakeAnnotator{})
+	task := task.NewTask(filename, src, p, sink)
 
 	startDecode := time.Now()
 	n, err := task.ProcessAllTests()
@@ -138,16 +138,16 @@ func TestTCPParser(t *testing.T) {
 	}
 
 	// Two tests (Cookies 2E1E and 2DEE) and have no snapshots, so there are only 362 rows committed.
-	if ins.Committed() != 362 {
-		t.Errorf("Expected %d, Got %d.", 362, ins.Committed())
+	if sink.Committed() != 362 {
+		t.Errorf("Expected %d, Got %d.", 362, sink.Committed())
 	}
 
-	if len(ins.data) < 1 {
+	if len(sink.data) < 1 {
 		t.Fatal("Should have at least one inserted row")
 	}
 
 	// Examine rows in some detail...
-	for i, rawRow := range ins.data {
+	for i, rawRow := range sink.data {
 		row, ok := rawRow.(*schema.TCPRow)
 		if !ok {
 			t.Fatal("not a TCPRow")
@@ -188,7 +188,7 @@ func TestTCPParser(t *testing.T) {
 	var largestRow *schema.TCPRow
 	var largestJson []byte
 	totalSnaps := int64(0)
-	for _, r := range ins.data {
+	for _, r := range sink.data {
 		row, _ := r.(*schema.TCPRow)
 		jsonBytes, _ := json.Marshal(r)
 		totalSnaps += int64(len(row.Snapshots))
@@ -223,8 +223,8 @@ func TestTCPTask(t *testing.T) {
 	parser.InitParserVersionForTest()
 
 	// Inject fake inserter and annotator
-	ins := newInMemorySink()
-	p := parser.NewTCPInfoParser(ins, "test", "_suffix", &fakeAnnotator{})
+	sink := newInMemorySink()
+	p := parser.NewTCPInfoParser(sink, "test", "_suffix", &fakeAnnotator{})
 
 	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
 	src, err := fileSource(filename)
@@ -232,7 +232,7 @@ func TestTCPTask(t *testing.T) {
 		t.Fatal("Failed reading testdata from", filename)
 	}
 
-	task := task.NewTask(filename, src, p)
+	task := task.NewTask(filename, src, p, sink)
 
 	n, err := task.ProcessAllTests()
 	if err != nil {
@@ -248,8 +248,8 @@ func TestBQSaver(t *testing.T) {
 	parser.InitParserVersionForTest()
 
 	// Inject fake inserter and annotator
-	ins := newInMemorySink()
-	p := parser.NewTCPInfoParser(ins, "test", "_suffix", &fakeAnnotator{})
+	sink := newInMemorySink()
+	p := parser.NewTCPInfoParser(sink, "test", "_suffix", &fakeAnnotator{})
 
 	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
 	src, err := fileSource(filename)
@@ -257,14 +257,14 @@ func TestBQSaver(t *testing.T) {
 		t.Fatal("Failed reading testdata from", filename)
 	}
 
-	task := task.NewTask(filename, src, p)
+	task := task.NewTask(filename, src, p, sink)
 
 	_, err = task.ProcessAllTests()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	row, _ := ins.data[0].(*schema.TCPRow)
+	row, _ := sink.data[0].(*schema.TCPRow)
 	rowMap, _, _ := row.Save()
 	sid, ok := rowMap["SockID"]
 	if !ok {
@@ -281,8 +281,8 @@ func BenchmarkTCPParser(b *testing.B) {
 	parser.InitParserVersionForTest()
 
 	// Inject fake inserter and annotator
-	ins := newInMemorySink()
-	p := parser.NewTCPInfoParser(ins, "test", "_suffix", &fakeAnnotator{})
+	sink := newInMemorySink()
+	p := parser.NewTCPInfoParser(sink, "test", "_suffix", &fakeAnnotator{})
 
 	filename := "testdata/20190516T013026.744845Z-tcpinfo-mlab4-arn02-ndt.tgz"
 	n := 0
@@ -292,7 +292,7 @@ func BenchmarkTCPParser(b *testing.B) {
 			b.Fatalf("cannot read testdata.")
 		}
 
-		task := task.NewTask(filename, src, p)
+		task := task.NewTask(filename, src, p, sink)
 
 		n, err = task.ProcessAllTests()
 		if err != nil {
