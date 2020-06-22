@@ -94,6 +94,10 @@ func (in *inMemorySink) Commit(data []interface{}, label string) (int, error) {
 	return len(data), nil
 }
 
+func (in *inMemorySink) Close() error {
+	return nil
+}
+
 func (in *inMemorySink) Flush() error {
 	in.committed = len(in.data)
 	return nil
