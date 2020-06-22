@@ -90,7 +90,7 @@ func TestValidateTestPath(t *testing.T) {
 			wantType: etl.TCPINFO,
 			want: etl.DataPath{
 				`gs://pusher-mlab-staging/ndt/tcpinfo/2019/05/25/20190525T020001.697396Z-tcpinfo-mlab4-ord01-ndt.tgz`,
-				"pusher-mlab-staging", "ndt", "tcpinfo", "2019/05/25", "20190525", "020001", "tcpinfo", "mlab4", "ord01", "ndt", "", "", ".tgz",
+				"pusher-mlab-staging", "ndt", "tcpinfo", "2019/05/25", "20190525", "020001.697396", "tcpinfo", "mlab4", "ord01", "ndt", "", "", ".tgz",
 			},
 		},
 		{
@@ -108,7 +108,7 @@ func TestValidateTestPath(t *testing.T) {
 			wantType: etl.PT,
 			want: etl.DataPath{
 				`gs://archive-mlab-oti/ndt/traceroute/2019/06/20/20190620T224809.435046Z-traceroute-mlab1-den06-ndt.tgz`,
-				"archive-mlab-oti", "ndt", "traceroute", "2019/06/20", "20190620", "224809", "traceroute", "mlab1", "den06", "ndt", "", "", ".tgz",
+				"archive-mlab-oti", "ndt", "traceroute", "2019/06/20", "20190620", "224809.435046", "traceroute", "mlab1", "den06", "ndt", "", "", ".tgz",
 			},
 		},
 	}
@@ -128,6 +128,10 @@ func TestValidateTestPath(t *testing.T) {
 				if diff := deep.Equal(got, tt.want); diff != nil {
 					log.Println(tt.path)
 					t.Errorf("%s: %v\n", tt.name, diff)
+				}
+				reconst := fmt.Sprintf("gs://%s/%s%s", got.Bucket, got.PathAndFilename(), tt.want.Suffix)
+				if reconst != tt.path {
+					t.Error(tt.name, "expected:", tt.path, "got:", reconst, "\n", tt.want)
 				}
 			}
 		})
