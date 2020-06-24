@@ -282,7 +282,7 @@ func TestBQSaver(t *testing.T) {
 // bq load --source_format=NEWLINE_DELIMITED_JSON \
 //    mlab-sandbox:gfr.small_tcpinfo gs://archive-mlab-testing/gfr/tcpinfo.json ./schema.json
 // Recommend commenting out snapshots in tcpinfo.go.
-func TestTaskToGCS(t *testing.T) {
+func xTestTaskToGCS(t *testing.T) {
 	os.Setenv("RELEASE_TAG", "foobar")
 	parser.InitParserVersionForTest()
 
